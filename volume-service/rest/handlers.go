@@ -3,45 +3,66 @@ package rest
 import (
 	"net/http"
 
+	"github.com/gin-gonic/gin"
+	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
 )
 
-// addHandlers adds http handlers
-func (service *RESTService) addHandlers() {
-	service.router.HandleFunc("/", service.basicAuth(service.getRootHandler)).Methods("GET")
-	service.router.HandleFunc("/func1", service.basicAuth(service.getFunc1Handler)).Methods("GET")
+// setupRouter setup http request router
+func (service *RESTService) setupRouter() {
+	service.router.GET("/ping", service.handlePing)
+
+	// require authentication
+	devicesGroup := service.router.Group("/devices", gin.BasicAuth(service.getUserAccounts()))
+	// /devices/
+	devicesGroup.GET(".", service.handleListDevices)
 }
 
-func (service *RESTService) getRootHandler(w http.ResponseWriter, r *http.Request) {
+func (service *RESTService) handlePing(c *gin.Context) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
 		"struct":   "RESTService",
-		"function": "getRootHandler",
+		"function": "handlePing",
 	})
 
-	logger.Infof("Page access request from %s to %s", r.RemoteAddr, r.RequestURI)
+	logger.Infof("Page access request to %s", c.Request.URL)
 
-	w.Header().Set("Content-Type", "text/html")
-
-	_, err := w.Write([]byte("called root success!"))
-	if err != nil {
-		logger.Error(err)
+	type pingOutput struct {
+		Message string `json:"message"`
 	}
+
+	output := pingOutput{
+		Message: "pong",
+	}
+	c.JSON(http.StatusOK, output)
 }
 
-func (service *RESTService) getFunc1Handler(w http.ResponseWriter, r *http.Request) {
+func (service *RESTService) handleListDevices(c *gin.Context) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
 		"struct":   "RESTService",
-		"function": "getFunc1Handler",
+		"function": "handleListDevices",
 	})
 
-	logger.Infof("Page access request from %s to %s", r.RemoteAddr, r.RequestURI)
+	logger.Infof("Page access request to %s", c.Request.URL)
 
-	w.Header().Set("Content-Type", "text/html")
+	user := c.MustGet(gin.AuthUserKey).(string)
 
-	_, err := w.Write([]byte("called func1 success!"))
-	if err != nil {
-		logger.Error(err)
+	type listOutput struct {
+		Devices []types.Device `json:"devices"`
 	}
+
+	// dummy data
+	devices := []types.Device{
+		{
+			ID:          types.NewDeviceID(),
+			Username:    user,
+			Description: "dummy description",
+		},
+	}
+
+	output := listOutput{
+		Devices: devices,
+	}
+	c.JSON(http.StatusOK, output)
 }
