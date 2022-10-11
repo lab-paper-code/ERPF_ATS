@@ -1,24 +1,20 @@
 package rest
 
-import log "github.com/sirupsen/logrus"
+import (
+	"github.com/gin-gonic/gin"
+)
 
-// authenticateUser authenticates user
-// TODO: Need to implement this
-func (service *RESTService) authenticateUser(username string, password string) bool {
-	logger := log.WithFields(log.Fields{
-		"package":  "rest",
-		"struct":   "RESTService",
-		"function": "authenticateUser",
-	})
+var (
+	// id-pwd map
+	authenticatedUsers = gin.Accounts{}
+)
 
-	logger.Debugf("authenticating a user %s", username)
+func init() {
+	// this is called automatically
+	authenticatedUsers["admin"] = "admin"
+}
 
-	// login successful
-	if username == "admin" && password == "admin" {
-		logger.Debugf("authenticated a user %s", username)
-		return true
-	}
-
-	logger.Debugf("failed to authenticate a user %s", username)
-	return false
+// getUserAccounts returns user accounts
+func (service *RESTService) getUserAccounts() gin.Accounts {
+	return authenticatedUsers
 }

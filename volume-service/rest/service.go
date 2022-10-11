@@ -1,18 +1,21 @@
 package rest
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	log "github.com/sirupsen/logrus"
 )
 
 type RESTService struct {
-	config    *commons.Config
-	router    *mux.Router
-	webServer *http.Server
+	config     *commons.Config
+	address    string
+	router     *gin.Engine
+	httpServer *http.Server
 }
 
 // Start starts RESTService
@@ -22,27 +25,28 @@ func Start(config *commons.Config) (*RESTService, error) {
 		"function": "Start",
 	})
 
+	addr := fmt.Sprintf(":%d", config.RestPort)
+	router := gin.Default()
+
 	service := &RESTService{
-		config:    config,
-		router:    mux.NewRouter(),
-		webServer: nil,
+		config:  config,
+		address: addr,
+		router:  router,
+		httpServer: &http.Server{
+			Addr:    addr,
+			Handler: router,
+		},
 	}
 
-	service.addHandlers()
+	// setup HTTP request router
+	service.setupRouter()
 
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", config.RestPort),
-		Handler: service.router,
-	}
-
-	service.webServer = server
-
-	fmt.Printf("Starting RESTful service at %s\n", server.Addr)
+	fmt.Printf("Starting RESTful service at %s\n", service.address)
 	// listen and serve in background
 	go func() {
-		err := server.ListenAndServe()
+		err := service.httpServer.ListenAndServe()
 		if err != nil {
-			logger.Error(err)
+			logger.Fatal(err)
 		}
 	}()
 
@@ -58,30 +62,15 @@ func (service *RESTService) Stop() error {
 	})
 
 	fmt.Printf("Stopping the RESTful service\n")
-	err := service.webServer.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := service.httpServer.Shutdown(ctx)
 	if err != nil {
 		logger.Error(err)
 		return err
 	}
+	fmt.Printf("Stopped the RESTful service service\n")
 
 	return nil
-}
-
-// basicAuth requires authenticated user
-func (service *RESTService) basicAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		username, password, ok := r.BasicAuth()
-		if ok {
-			pass := service.authenticateUser(username, password)
-			if pass {
-				// authorized user
-				next.ServeHTTP(w, r)
-				return
-			}
-		}
-
-		// unauthorized
-		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	}
 }
