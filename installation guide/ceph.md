@@ -6,7 +6,7 @@ ceph version : 16.2.10
 
 ## rook ceph 설치 
 
-* ceph 코드clone 받아 오기
+* ceph 코드 clone 받아 오기
 ```
 git clone --single-branch --branch v1.9.10 https://github.com/rook/rook.git
 ```
