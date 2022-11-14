@@ -1,0 +1,5 @@
+helm_chart는 yaml,python,json 코드들만 있어요
+md 추가할거 디렉토리는 installation guide에 추가하면 되요
+helm.md하고 img 디렉토리는 경로 같이 맞춰주세요
+
+감사합니다~
