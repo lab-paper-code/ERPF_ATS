@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/lab-paper-code/ksv/volume-service/commons"
+	"github.com/lab-paper-code/ksv/volume-service/db"
 	"github.com/lab-paper-code/ksv/volume-service/rest"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -17,8 +18,8 @@ var config *commons.Config
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "volume-service [args..]",
-	Short: "Provides controls of volumes via RESTful interface",
-	Long:  `Volume-Serivce provides controls of volumes via RESTful interface.`,
+	Short: "Provides controls of volumes via REST interface",
+	Long:  `Volume-Serivce provides controls of volumes via REST interface.`,
 	RunE:  processCommand,
 }
 
@@ -42,13 +43,21 @@ func processCommand(command *cobra.Command, args []string) error {
 	}
 
 	// start service
-	log.Info("Starting RESTful Service...")
-	restService, err := rest.Start(config)
+	log.Info("Starting DB Service...")
+	dbService, err := db.Start(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer dbService.Stop()
+	log.Info("DB Service Started")
+
+	log.Info("Starting REST Service...")
+	restService, err := rest.Start(config, dbService)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer restService.Stop()
-	log.Info("RESTful Service Started")
+	log.Info("REST Service Started")
 
 	// wait
 	fmt.Println("Press Ctrl+C to stop...")

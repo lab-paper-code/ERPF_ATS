@@ -1,14 +1,45 @@
-package rest
+package db
 
-import(
+import (
 	"database/sql"
-	"github.com/go-sql-driver/mysql"
-	"github.com/lab-paper-code/ksv/volume-service/types"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
+	"github.com/lab-paper-code/ksv/volume-service/commons"
+	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
 )
 
-func (service *RESTService) GetConnector() *sql.DB {
+type DBService struct {
+	config *commons.Config
+}
+
+// Start starts DBService
+func Start(config *commons.Config) (*DBService, error) {
+	service := &DBService{
+		config: config,
+	}
+
+	return service, nil
+}
+
+// Stop stops DBService
+func (service *DBService) Stop() error {
+	logger := log.WithFields(log.Fields{
+		"package":  "db",
+		"struct":   "DBService",
+		"function": "Stop",
+	})
+
+	logger.Infof("Stopping the DB service\n")
+
+	logger.Infof("Stopped the DB service service\n")
+
+	return nil
+}
+
+// Stop stops DBService
+func (service *DBService) GetConnector() *sql.DB {
 	cfg := mysql.Config{
 		User:                 "root",
 		Passwd:               "root",
@@ -29,11 +60,13 @@ func (service *RESTService) GetConnector() *sql.DB {
 	return db
 }
 
-func (service *RESTService) InsertDevice(device types.Device, db *sql.DB)(int64, error) {
+func (service *DBService) InsertDevice(device types.Device, db *sql.DB) (int64, error) {
 	var idx int64
 
 	res, err := db.Exec("INSERT INTO device (idx, device_ip,id,pass) VALUES (NULL, ?, ?, ?)", device.IP, device.ID, device.Pwd)
-	if err != nil {return idx, err}
+	if err != nil {
+		return idx, err
+	}
 
 	idx, err = res.LastInsertId()
 
@@ -44,31 +77,38 @@ func (service *RESTService) InsertDevice(device types.Device, db *sql.DB)(int64,
 	return idx, nil
 }
 
-func(service *RESTService) ReassignRows(db *sql.DB) {
-	 _, err := db.Exec("SET @CNT=0")
-    service.checkError(err)
-	_,err = db.Exec("UPDATE device SET device.idx = @CNT:=@CNT+1;")
-	service.checkError(err)
+func (service *DBService) ReassignRows(db *sql.DB) {
+	_, err := db.Exec("SET @CNT=0")
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = db.Exec("UPDATE device SET device.idx = @CNT:=@CNT+1;")
+	if err != nil {
+		panic(err)
+	}
 
 	//auto increment 초기화
 	var idx string
 	err = db.QueryRow("SELECT idx FROM device ORDER BY idx DESC LIMIT 1").Scan(&idx)
-	service.checkError(err)
+	if err != nil {
+		panic(err)
+	}
 
 	print(idx)
 
 	stmt, err := db.Prepare("ALTER TABLE device AUTO_INCREMENT=?")
+	if err != nil {
+		panic(err)
+	}
+
 	defer stmt.Close()
 
 	_, err = stmt.Exec(idx)
-	service.checkError(err)
+	if err != nil {
+		panic(err)
+	}
 	// _, err = db.Exec("ALTER TABLE device AUTO_INCREMENT=?", idx)
 	// checkError(err)
 
-}
-
-func (service *RESTService)checkError(err error) {
-    if err != nil {
-        panic(err)
-    }
 }
