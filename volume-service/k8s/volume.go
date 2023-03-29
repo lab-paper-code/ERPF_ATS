@@ -99,14 +99,11 @@ func (client *K8sClient) CreatePVC(username string, volumeID string) error {
 	defer cancel()
 
 	_, err := pvcclient.Get(ctx, claim.GetName(), metav1.GetOptions{})
-
 	if err != nil {
 		// failed to get an existing claim
 		_, err = pvcclient.Create(ctx, claim, metav1.CreateOptions{})
 		if err != nil {
-			print(err,"\n")
 			// failed to create one
-			log.Fatal(err)
 			logger.Errorf("Failed to create a PVC for user %s, volume id %s", username, volumeID)
 			return err
 		}
