@@ -1,0 +1,6 @@
+rest_port: 31200
+log_level: debug
+db_username: root
+db_password: root
+db_name: ksv
+db_address: "10.106.213.189:3306"

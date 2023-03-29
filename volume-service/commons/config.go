@@ -12,13 +12,25 @@ import (
 )
 
 const (
-	defaultRestPort int    = 31200
-	defaultLogLevel string = "fatal"
+	defaultRestPort   int    = 31200
+	defaultLogLevel   string = "fatal"
+	defaultDBUsername string = "root"
+	defaultDBPassword string = "root"
+	defaultDBName     string = "root"
+	defaultDBAddress  string = "localhost:3306"
 )
 
 type Config struct {
-	RestPort int    `yaml:"rest_port,omitempty" json:"rest_port,omitempty" envconfig:"VOLUME_SERVICE_REST_PORT"`
-	LogLevel string `yaml:"log_level,omitempty" json:"level,omitempty" envconfig:"VOLUME_SERVICE_LOG_LEVEL"`
+	// REST related
+	RestPort int `yaml:"rest_port,omitempty" json:"rest_port,omitempty" envconfig:"VOLUME_SERVICE_REST_PORT"`
+
+	// DB related
+	DBUsername string `yaml:"db_username,omitempty" json:"db_username,omitempty" envconfig:"VOLUME_SERVICE_DB_USERNAME"`
+	DBPassword string `yaml:"db_password,omitempty" json:"db_password,omitempty" envconfig:"VOLUME_SERVICE_DB_PASSWORD"`
+	DBAddress  string `yaml:"db_address,omitempty" json:"db_address,omitempty" envconfig:"VOLUME_SERVICE_DB_ADDRESS"`
+	DBName     string `yaml:"db_name,omitempty" json:"db_name,omitempty" envconfig:"VOLUME_SERVICE_DB_NAME"`
+
+	LogLevel string `yaml:"log_level,omitempty" json:"log_level,omitempty" envconfig:"VOLUME_SERVICE_LOG_LEVEL"`
 }
 
 // GetLogLevel returns logrus log level
@@ -35,8 +47,12 @@ func (config *Config) GetLogLevel() log.Level {
 // GetDefaultConfig returns a default config
 func GetDefaultConfig() *Config {
 	return &Config{
-		RestPort: defaultRestPort,
-		LogLevel: defaultLogLevel,
+		RestPort:   defaultRestPort,
+		DBUsername: defaultDBUsername,
+		DBPassword: defaultDBPassword,
+		DBAddress:  defaultDBAddress,
+		DBName:     defaultDBName,
+		LogLevel:   defaultLogLevel,
 	}
 }
 

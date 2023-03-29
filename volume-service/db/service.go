@@ -20,37 +20,29 @@ func Start(config *commons.Config) (*DBService, error) {
 		config: config,
 	}
 
+	// do connection pooling if you need
+
 	return service, nil
 }
 
 // Stop stops DBService
 func (service *DBService) Stop() error {
-	logger := log.WithFields(log.Fields{
-		"package":  "db",
-		"struct":   "DBService",
-		"function": "Stop",
-	})
-
-	logger.Infof("Stopping the DB service\n")
-
-	logger.Infof("Stopped the DB service service\n")
-
 	return nil
 }
 
 // Stop stops DBService
 func (service *DBService) GetConnector() *sql.DB {
 	cfg := mysql.Config{
-		User:                 "root",
-		Passwd:               "root",
+		User:                 service.config.DBUsername,
+		Passwd:               service.config.DBPassword,
 		Net:                  "tcp",
-		Addr:                 "10.106.213.189:3306",
+		Addr:                 service.config.DBAddress,
 		Collation:            "utf8mb4_general_ci",
 		Loc:                  time.UTC,
 		MaxAllowedPacket:     4 << 20.,
 		AllowNativePasswords: true,
 		CheckConnLiveness:    true,
-		DBName:               "ksv",
+		DBName:               service.config.DBName,
 	}
 	connector, err := mysql.NewConnector(&cfg)
 	if err != nil {
@@ -63,7 +55,7 @@ func (service *DBService) GetConnector() *sql.DB {
 func (service *DBService) InsertDevice(device types.Device, db *sql.DB) (int64, error) {
 	var idx int64
 
-	res, err := db.Exec("INSERT INTO device (idx, device_ip,id,pass) VALUES (NULL, ?, ?, ?)", device.IP, device.ID, device.Pwd)
+	res, err := db.Exec("INSERT INTO device (idx, device_ip,id,pass) VALUES (NULL, ?, ?, ?)", device.IP, device.ID, device.Password)
 	if err != nil {
 		return idx, err
 	}

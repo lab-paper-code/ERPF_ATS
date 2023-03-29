@@ -43,21 +43,21 @@ func processCommand(command *cobra.Command, args []string) error {
 	}
 
 	// start service
-	log.Info("Starting DB Service...")
+	logger.Info("Starting DB Service...")
 	dbService, err := db.Start(config)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	defer dbService.Stop()
-	log.Info("DB Service Started")
+	logger.Info("DB Service Started")
 
-	log.Info("Starting REST Service...")
+	logger.Info("Starting REST Service...")
 	restService, err := rest.Start(config, dbService)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	defer restService.Stop()
-	log.Info("REST Service Started")
+	logger.Info("REST Service Started")
 
 	// wait
 	fmt.Println("Press Ctrl+C to stop...")

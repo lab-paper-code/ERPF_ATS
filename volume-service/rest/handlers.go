@@ -22,7 +22,6 @@ func (service *RESTService) setupRouter() {
 	devicesGroup := service.router.Group("/devices", gin.BasicAuth(service.getUserAccounts()))
 	// /devices/
 	devicesGroup.GET(".", service.handleListDevices)
-	//service.router.GET("/register", service.handleRegister)
 	service.router.POST("/register", service.handleRegister)
 }
 
@@ -65,7 +64,7 @@ func (service *RESTService) handleListDevices(c *gin.Context) {
 		{
 			ID:       types.NewDeviceID(),
 			Username: user,
-			Pwd:      "test",
+			Password: "test",
 		},
 	}
 
@@ -99,7 +98,7 @@ func (service *RESTService) handleRegister(c *gin.Context) {
 		IP:       input.IP,
 		ID:       "",
 		Username: input.Username,
-		Pwd:      input.Pwd,
+		Password: input.Password,
 		Storage:  input.Storage,
 	}
 
@@ -205,7 +204,7 @@ func (service *RESTService) handleRegister(c *gin.Context) {
 		IP:       input.IP,
 		ID:       volumeID,
 		Username: input.Username,
-		Pwd:      input.Pwd,
+		Password: input.Password,
 		Storage:  input.Storage,
 	}
 

@@ -99,6 +99,8 @@ func processFlags(command *cobra.Command) (bool, error) {
 		}
 	}
 
+	log.SetLevel(config.GetLogLevel())
+
 	// prioritize command-line flag over config files
 	if debug {
 		log.SetLevel(log.DebugLevel)
