@@ -8,6 +8,7 @@ import (
 
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	"github.com/lab-paper-code/ksv/volume-service/db"
+	"github.com/lab-paper-code/ksv/volume-service/k8s"
 	"github.com/lab-paper-code/ksv/volume-service/rest"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -51,8 +52,16 @@ func processCommand(command *cobra.Command, args []string) error {
 	defer dbService.Stop()
 	logger.Info("DB Service Started")
 
+	logger.Info("Starting K8S Service...")
+	k8sService, err := k8s.Start(config)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	defer k8sService.Stop()
+	logger.Info("K8S Service Started")
+
 	logger.Info("Starting REST Service...")
-	restService, err := rest.Start(config, dbService)
+	restService, err := rest.Start(config, dbService, k8sService)
 	if err != nil {
 		logger.Fatal(err)
 	}

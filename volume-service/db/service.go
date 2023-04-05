@@ -30,8 +30,7 @@ func (service *DBService) Stop() error {
 	return nil
 }
 
-// Stop stops DBService
-func (service *DBService) GetConnector() *sql.DB {
+func (service *DBService) getConnector() *sql.DB {
 	cfg := mysql.Config{
 		User:                 service.config.DBUsername,
 		Passwd:               service.config.DBPassword,
@@ -52,6 +51,49 @@ func (service *DBService) GetConnector() *sql.DB {
 	return db
 }
 
+func (service *DBService) ListDevices() ([]types.Device, error) {
+	logger := log.WithFields(log.Fields{
+		"package":  "db",
+		"struct":   "DBService",
+		"function": "ListDevices",
+	})
+
+	logger.Info("received ListDevices()")
+
+	// TODO: implement this
+	return nil, nil
+}
+
+func (service *DBService) GetDevice(id string) (*types.Device, error) {
+	logger := log.WithFields(log.Fields{
+		"package":  "db",
+		"struct":   "DBService",
+		"function": "GetDevice",
+	})
+
+	logger.Info("received GetDevice()")
+
+	// TODO: implement this
+	device := types.Device{
+		ID: id,
+	}
+
+	return &device, nil
+}
+func (service *DBService) InsertDevice(device *types.Device) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "db",
+		"struct":   "DBService",
+		"function": "InsertDevice",
+	})
+
+	logger.Info("received InsertDevice()")
+
+	// TODO: implement this
+	return nil
+}
+
+/*
 func (service *DBService) InsertDevice(device types.Device, db *sql.DB) (int64, error) {
 	var idx int64
 
@@ -104,3 +146,4 @@ func (service *DBService) ReassignRows(db *sql.DB) {
 	// checkError(err)
 
 }
+*/
