@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	"github.com/lab-paper-code/ksv/volume-service/db"
+	"github.com/lab-paper-code/ksv/volume-service/k8s"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,10 +19,11 @@ type RESTService struct {
 	router     *gin.Engine
 	httpServer *http.Server
 	db         *db.DBService
+	k8s        *k8s.K8SService
 }
 
 // Start starts RESTService
-func Start(config *commons.Config, dbService *db.DBService) (*RESTService, error) {
+func Start(config *commons.Config, dbService *db.DBService, k8sService *k8s.K8SService) (*RESTService, error) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
 		"function": "Start",
@@ -38,12 +40,14 @@ func Start(config *commons.Config, dbService *db.DBService) (*RESTService, error
 			Addr:    addr,
 			Handler: router,
 		},
-		db: dbService,
+		db:  dbService,
+		k8s: k8sService,
 	}
 
 	// setup HTTP request router
 	service.setupRouter()
 
+	fmt.Printf("Starting REST service at %s\n", service.address)
 	logger.Infof("Starting REST service at %s\n", service.address)
 	// listen and serve in background
 	go func() {

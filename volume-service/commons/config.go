@@ -12,17 +12,21 @@ import (
 )
 
 const (
-	defaultRestPort   int    = 31200
-	defaultLogLevel   string = "fatal"
-	defaultDBUsername string = "root"
-	defaultDBPassword string = "root"
-	defaultDBName     string = "root"
-	defaultDBAddress  string = "localhost:3306"
+	defaultRestAdminUsername string = "admin"
+	defaultRestAdminPassword string = "letmein"
+	defaultRestPort          int    = 31200
+	defaultLogLevel          string = "fatal"
+	defaultDBUsername        string = "root"
+	defaultDBPassword        string = "root"
+	defaultDBName            string = "root"
+	defaultDBAddress         string = "localhost:3306"
 )
 
 type Config struct {
 	// REST related
-	RestPort int `yaml:"rest_port,omitempty" json:"rest_port,omitempty" envconfig:"VOLUME_SERVICE_REST_PORT"`
+	RestAdminUsername string `yaml:"rest_admin_username,omitempty" json:"rest_admin_username,omitempty" envconfig:"VOLUME_SERVICE_REST_ADMIN_USERNAME"`
+	RestAdminPassword string `yaml:"rest_admin_password,omitempty" json:"rest_admin_password,omitempty" envconfig:"VOLUME_SERVICE_REST_ADMIN_PASSWORD"`
+	RestPort          int    `yaml:"rest_port,omitempty" json:"rest_port,omitempty" envconfig:"VOLUME_SERVICE_REST_PORT"`
 
 	// DB related
 	DBUsername string `yaml:"db_username,omitempty" json:"db_username,omitempty" envconfig:"VOLUME_SERVICE_DB_USERNAME"`
@@ -47,12 +51,14 @@ func (config *Config) GetLogLevel() log.Level {
 // GetDefaultConfig returns a default config
 func GetDefaultConfig() *Config {
 	return &Config{
-		RestPort:   defaultRestPort,
-		DBUsername: defaultDBUsername,
-		DBPassword: defaultDBPassword,
-		DBAddress:  defaultDBAddress,
-		DBName:     defaultDBName,
-		LogLevel:   defaultLogLevel,
+		RestAdminUsername: defaultRestAdminUsername,
+		RestAdminPassword: defaultRestAdminPassword,
+		RestPort:          defaultRestPort,
+		DBUsername:        defaultDBUsername,
+		DBPassword:        defaultDBPassword,
+		DBAddress:         defaultDBAddress,
+		DBName:            defaultDBName,
+		LogLevel:          defaultLogLevel,
 	}
 }
 
