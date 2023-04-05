@@ -1,6 +1,8 @@
 package types
 
 import (
+	"time"
+
 	"github.com/rs/xid"
 )
 
@@ -10,11 +12,13 @@ const (
 
 // Device represents a device, holding all necessary info. about device
 type Device struct {
-	ID          string `json:"id"`
-	IP          string `json:"ip"`
-	Password    string `json:"password"`
-	StorageSize uint64 `json:"storage_size"`
-	Description string `json:"description,omitempty"`
+	ID          string    `json:"id" gorm:"primaryKey"`
+	IP          string    `json:"ip"`
+	Password    string    `json:"password"`
+	StorageSize uint64    `json:"storage_size"`
+	Description string    `json:"description,omitempty"`
+	CreatedAt   time.Time `json:"created_at,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at,omitempty"`
 }
 
 // NewDeviceID creates a new Device ID

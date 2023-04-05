@@ -2,12 +2,12 @@ package commons
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -68,7 +68,7 @@ func newConfigFromJSON(jsonBytes []byte) (*Config, error) {
 
 	err := json.Unmarshal(jsonBytes, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON - %v", err)
+		return nil, xerrors.Errorf("failed to unmarshal JSON - %v", err)
 	}
 
 	return config, nil
@@ -80,7 +80,7 @@ func newConfigFromYAML(yamlBytes []byte) (*Config, error) {
 
 	err := yaml.Unmarshal(yamlBytes, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal YAML - %v", err)
+		return nil, xerrors.Errorf("failed to unmarshal YAML - %v", err)
 	}
 
 	return config, nil
@@ -92,7 +92,7 @@ func newConfigFromENV() (*Config, error) {
 
 	err := envconfig.Process("", config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config from environmental variables - %v", err)
+		return nil, xerrors.Errorf("failed to read config from environmental variables - %v", err)
 	}
 
 	return config, nil
@@ -140,10 +140,10 @@ func LoadConfigFile(configFilePath string) (*Config, error) {
 			return config, nil
 		}
 
-		return nil, fmt.Errorf("unreachable line")
+		return nil, xerrors.Errorf("unreachable line")
 	}
 
-	return nil, fmt.Errorf("unhandled configuration file - %s", configFilePath)
+	return nil, xerrors.Errorf("unhandled configuration file - %s", configFilePath)
 }
 
 // LoadConfigEnv returns Config from environmental variables
