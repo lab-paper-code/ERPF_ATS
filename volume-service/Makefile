@@ -12,4 +12,4 @@ GOPATH=$(shell go env GOPATH)
 .PHONY: build
 build:
 	mkdir -p bin
-	CGO_ENABLED=0 go build -ldflags=${LDFLAGS} -o bin/volume-service ./cmd/*.go
+	CGO_ENABLED=1 go build -ldflags=${LDFLAGS} -o bin/volume-service ./cmd/*.go

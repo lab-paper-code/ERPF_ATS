@@ -1,6 +1,9 @@
 package db
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +23,27 @@ const (
 type DBService struct {
 	config *commons.Config
 	db     *gorm.DB
+}
+
+func RemoveDBFile(config *commons.Config) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "db",
+		"function": "RemoveDBFile",
+	})
+
+	absPath, err := filepath.Abs(SQLiteDBFileName)
+	if err != nil {
+		return err
+	}
+
+	fi, err := os.Stat(absPath)
+	if err == nil && !fi.IsDir() {
+		// exist
+		logger.Infof("Removing db file %s", absPath)
+		return os.RemoveAll(SQLiteDBFileName)
+	}
+
+	return nil
 }
 
 // Start starts DBService

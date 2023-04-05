@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/lab-paper-code/ksv/volume-service/commons"
+	"github.com/lab-paper-code/ksv/volume-service/db"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -15,6 +16,7 @@ func setCommonFlags(command *cobra.Command) {
 	command.Flags().BoolP("version", "v", false, "Print version")
 	command.Flags().BoolP("help", "h", false, "Print help")
 	command.Flags().BoolP("debug", "d", false, "Enable debug mode")
+	command.Flags().Bool("clear_db", false, "Clear DB data")
 }
 
 func processFlags(command *cobra.Command) (bool, error) {
@@ -104,6 +106,19 @@ func processFlags(command *cobra.Command) (bool, error) {
 	// prioritize command-line flag over config files
 	if debug {
 		log.SetLevel(log.DebugLevel)
+	}
+
+	clearDBDataFlag := command.Flags().Lookup("clear_db")
+	if clearDBDataFlag != nil {
+		clearDBDataVal, err := strconv.ParseBool(clearDBDataFlag.Value.String())
+		if err == nil && clearDBDataVal {
+			// clear db
+			err = db.RemoveDBFile(config)
+			if err != nil {
+				logger.Error(err)
+				return false, err
+			}
+		}
 	}
 
 	return true, nil // contiue
