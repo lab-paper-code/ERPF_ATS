@@ -5,21 +5,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// getUserAccounts returns user accounts
-func (service *RESTService) getUserAccounts() gin.Accounts {
+// getDeviceAccounts returns device accounts
+func (adapter *RESTAdapter) getDeviceAccounts() gin.Accounts {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
-		"struct":   "RESTService",
-		"function": "getUserAccounts",
+		"struct":   "RESTAdapter",
+		"function": "getDeviceAccounts",
 	})
 
 	users := gin.Accounts{}
 
-	// admin
-	users[service.config.RestAdminUsername] = service.config.RestAdminPassword
-
 	// devices
-	devices, err := service.db.ListDevices()
+	devices, err := adapter.logic.ListDevices()
 	if err != nil {
 		logger.WithError(err).Errorf("failed to list devices for authentication")
 		return users
@@ -33,11 +30,11 @@ func (service *RESTService) getUserAccounts() gin.Accounts {
 }
 
 // getAdminUserAccounts returns admin user accounts
-func (service *RESTService) getAdminUserAccounts() gin.Accounts {
+func (adapter *RESTAdapter) getAdminUserAccounts() gin.Accounts {
 	users := gin.Accounts{}
 
 	// admin
-	users[service.config.RestAdminUsername] = service.config.RestAdminPassword
+	users[adapter.config.RestAdminUsername] = adapter.config.RestAdminPassword
 
 	return users
 }

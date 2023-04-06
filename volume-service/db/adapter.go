@@ -12,15 +12,15 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	SQLiteDBFileName string = "volume-service.db"
-)
-
 // we use GORM here to connect DataBase
 // check out GORM examples below
 // https://gorm.io/docs/create.html
 
-type DBService struct {
+const (
+	SQLiteDBFileName string = "volume-service.db"
+)
+
+type DBAdapter struct {
 	config *commons.Config
 	db     *gorm.DB
 }
@@ -46,8 +46,8 @@ func RemoveDBFile(config *commons.Config) error {
 	return nil
 }
 
-// Start starts DBService
-func Start(config *commons.Config) (*DBService, error) {
+// Start starts DBAdapter
+func Start(config *commons.Config) (*DBAdapter, error) {
 	db, err := gorm.Open(sqlite.Open(SQLiteDBFileName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -58,30 +58,22 @@ func Start(config *commons.Config) (*DBService, error) {
 		return nil, err
 	}
 
-	service := &DBService{
+	adapter := &DBAdapter{
 		config: config,
 		db:     db,
 	}
 
-	return service, nil
+	return adapter, nil
 }
 
-// Stop stops DBService
-func (service *DBService) Stop() error {
+// Stop stops DBAdapter
+func (adapter *DBAdapter) Stop() error {
 	return nil
 }
 
-func (service *DBService) ListDevices() ([]types.Device, error) {
-	logger := log.WithFields(log.Fields{
-		"package":  "db",
-		"struct":   "DBService",
-		"function": "ListDevices",
-	})
-
-	logger.Info("received ListDevices()")
-
+func (adapter *DBAdapter) ListDevices() ([]types.Device, error) {
 	devices := []types.Device{}
-	result := service.db.Find(&devices)
+	result := adapter.db.Find(&devices)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -89,17 +81,9 @@ func (service *DBService) ListDevices() ([]types.Device, error) {
 	return devices, nil
 }
 
-func (service *DBService) GetDevice(id string) (*types.Device, error) {
-	logger := log.WithFields(log.Fields{
-		"package":  "db",
-		"struct":   "DBService",
-		"function": "GetDevice",
-	})
-
-	logger.Info("received GetDevice()")
-
+func (adapter *DBAdapter) GetDevice(id string) (*types.Device, error) {
 	var device types.Device
-	result := service.db.First(&device, id)
+	result := adapter.db.First(&device, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -107,16 +91,8 @@ func (service *DBService) GetDevice(id string) (*types.Device, error) {
 	return &device, nil
 }
 
-func (service *DBService) InsertDevice(device *types.Device) error {
-	logger := log.WithFields(log.Fields{
-		"package":  "db",
-		"struct":   "DBService",
-		"function": "InsertDevice",
-	})
-
-	logger.Info("received InsertDevice()")
-
-	result := service.db.Create([]*types.Device{device})
+func (adapter *DBAdapter) InsertDevice(device *types.Device) error {
+	result := adapter.db.Create([]*types.Device{device})
 	if result.Error != nil {
 		return result.Error
 	}
