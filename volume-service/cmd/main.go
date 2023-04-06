@@ -9,6 +9,7 @@ import (
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	"github.com/lab-paper-code/ksv/volume-service/db"
 	"github.com/lab-paper-code/ksv/volume-service/k8s"
+	"github.com/lab-paper-code/ksv/volume-service/logic"
 	"github.com/lab-paper-code/ksv/volume-service/rest"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -44,29 +45,35 @@ func processCommand(command *cobra.Command, args []string) error {
 	}
 
 	// start service
-	logger.Info("Starting DB Service...")
-	dbService, err := db.Start(config)
+	logger.Info("Starting DB Adapter...")
+	dbAdapter, err := db.Start(config)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	defer dbService.Stop()
-	logger.Info("DB Service Started")
+	defer dbAdapter.Stop()
+	logger.Info("DB Adapter Started")
 
-	logger.Info("Starting K8S Service...")
-	k8sService, err := k8s.Start(config)
+	logger.Info("Starting K8S Adapter...")
+	k8sAdapter, err := k8s.Start(config)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	defer k8sService.Stop()
-	logger.Info("K8S Service Started")
+	defer k8sAdapter.Stop()
+	logger.Info("K8S Adapter Started")
 
-	logger.Info("Starting REST Service...")
-	restService, err := rest.Start(config, dbService, k8sService)
+	logik, err := logic.Start(config, dbAdapter, k8sAdapter)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	defer restService.Stop()
-	logger.Info("REST Service Started")
+	defer logik.Stop()
+
+	logger.Info("Starting REST Adapter...")
+	restAdapter, err := rest.Start(config, logik)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	defer restAdapter.Stop()
+	logger.Info("REST Adapter Started")
 
 	// wait
 	fmt.Println("Press Ctrl+C to stop...")

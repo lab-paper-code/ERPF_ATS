@@ -5,28 +5,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type K8SService struct {
+type K8SAdapter struct {
 	config *commons.Config
 }
 
-// Start starts K8SService
-func Start(config *commons.Config) (*K8SService, error) {
-	service := &K8SService{
+// Start starts K8SAdapter
+func Start(config *commons.Config) (*K8SAdapter, error) {
+	service := &K8SAdapter{
 		config: config,
 	}
 
 	return service, nil
 }
 
-// Stop stops K8SService
-func (service *K8SService) Stop() error {
+// Stop stops K8SAdapter
+func (adapter *K8SAdapter) Stop() error {
 	return nil
 }
 
-func (service *K8SService) CreatePV(volID string) error {
+func (adapter *K8SAdapter) CreatePV(volID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
-		"struct":   "K8SService",
+		"struct":   "K8SAdapter",
 		"function": "CreatePV",
 	})
 

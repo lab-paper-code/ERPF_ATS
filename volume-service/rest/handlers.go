@@ -2,6 +2,7 @@ package rest
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lab-paper-code/ksv/volume-service/types"
@@ -9,18 +10,27 @@ import (
 )
 
 // setupRouter setup http request router
-func (service *RESTService) setupRouter() {
-	service.router.GET("/ping", service.handlePing)
+func (adapter *RESTAdapter) setupRouter() {
+	adapter.router.GET("/ping", adapter.handlePing)
 
-	service.router.GET("/devices", gin.BasicAuth(service.getAdminUserAccounts()), service.handleListDevices)
-	service.router.GET("/devices:id", gin.BasicAuth(service.getUserAccounts()), service.handleGetDevice)
-	service.router.POST("/devices", service.handleRegisterDevice)
+	adapter.router.GET("/devices", gin.BasicAuth(adapter.getAdminUserAccounts()), adapter.handleListDevices)
+	adapter.router.GET("/devices/:id", adapter.handleGetDevice)
+	adapter.router.POST("/devices", adapter.handleRegisterDevice)
 }
 
-func (service *RESTService) handlePing(c *gin.Context) {
+func getAuthkeyFromRequest(c *gin.Context) string {
+	authorizationKey := c.Request.Header.Get("Authorization")
+	splitToken := strings.Split(authorizationKey, " ")
+	if len(splitToken) == 2 {
+		return splitToken[1]
+	}
+	return ""
+}
+
+func (adapter *RESTAdapter) handlePing(c *gin.Context) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
-		"struct":   "RESTService",
+		"struct":   "RESTAdapter",
 		"function": "handlePing",
 	})
 
@@ -36,16 +46,16 @@ func (service *RESTService) handlePing(c *gin.Context) {
 	c.JSON(http.StatusOK, output)
 }
 
-func (service *RESTService) handleListDevices(c *gin.Context) {
+func (adapter *RESTAdapter) handleListDevices(c *gin.Context) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
-		"struct":   "RESTService",
+		"struct":   "RESTAdapter",
 		"function": "handleListDevices",
 	})
 
 	logger.Infof("access request to %s", c.Request.URL)
 
-	devices, err := service.db.ListDevices()
+	devices, err := adapter.logic.ListDevices()
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -65,17 +75,22 @@ func (service *RESTService) handleListDevices(c *gin.Context) {
 	c.JSON(http.StatusOK, output)
 }
 
-func (service *RESTService) handleGetDevice(c *gin.Context) {
+func (adapter *RESTAdapter) handleGetDevice(c *gin.Context) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
-		"struct":   "RESTService",
+		"struct":   "RESTAdapter",
 		"function": "handleGetDevice",
 	})
 
 	logger.Infof("access request to %s", c.Request.URL)
 
 	id := c.Param("id")
-	device, err := service.db.GetDevice(id)
+	authKey := getAuthkeyFromRequest(c)
+	if len(authKey) > 0 {
+		logger.Infof("authKey %s", authKey)
+	}
+
+	device, err := adapter.logic.GetDevice(id, authKey)
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -87,10 +102,10 @@ func (service *RESTService) handleGetDevice(c *gin.Context) {
 	c.JSON(http.StatusOK, device)
 }
 
-func (service *RESTService) handleRegisterDevice(c *gin.Context) {
+func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
-		"struct":   "RESTService",
+		"struct":   "RESTAdapter",
 		"function": "handleRegisterDevice",
 	})
 
@@ -125,7 +140,7 @@ func (service *RESTService) handleRegisterDevice(c *gin.Context) {
 
 	logger.Debugf("ID: %s\tIP: %s\tPassword: %s\tStorageSize: %d", device.ID, device.IP, device.Password, storageSizeNum)
 
-	err = service.db.InsertDevice(&device)
+	err = adapter.logic.InsertDevice(&device)
 	if err != nil {
 		// fail
 		logger.Error(err)

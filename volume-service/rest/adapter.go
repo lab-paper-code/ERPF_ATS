@@ -8,22 +8,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lab-paper-code/ksv/volume-service/commons"
-	"github.com/lab-paper-code/ksv/volume-service/db"
-	"github.com/lab-paper-code/ksv/volume-service/k8s"
+	"github.com/lab-paper-code/ksv/volume-service/logic"
 	log "github.com/sirupsen/logrus"
 )
 
-type RESTService struct {
+type RESTAdapter struct {
 	config     *commons.Config
 	address    string
 	router     *gin.Engine
 	httpServer *http.Server
-	db         *db.DBService
-	k8s        *k8s.K8SService
+	logic      *logic.Logic
 }
 
-// Start starts RESTService
-func Start(config *commons.Config, dbService *db.DBService, k8sService *k8s.K8SService) (*RESTService, error) {
+// Start starts RESTAdapter
+func Start(config *commons.Config, logik *logic.Logic) (*RESTAdapter, error) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
 		"function": "Start",
@@ -32,7 +30,7 @@ func Start(config *commons.Config, dbService *db.DBService, k8sService *k8s.K8SS
 	addr := fmt.Sprintf(":%d", config.RestPort)
 	router := gin.Default()
 
-	service := &RESTService{
+	adapter := &RESTAdapter{
 		config:  config,
 		address: addr,
 		router:  router,
@@ -40,44 +38,41 @@ func Start(config *commons.Config, dbService *db.DBService, k8sService *k8s.K8SS
 			Addr:    addr,
 			Handler: router,
 		},
-		db:  dbService,
-		k8s: k8sService,
+		logic: logik,
 	}
 
 	// setup HTTP request router
-	service.setupRouter()
+	adapter.setupRouter()
 
-	fmt.Printf("Starting REST service at %s\n", service.address)
-	logger.Infof("Starting REST service at %s\n", service.address)
+	fmt.Printf("Starting REST service at %s\n", adapter.address)
+	logger.Infof("Starting REST service at %s\n", adapter.address)
 	// listen and serve in background
 	go func() {
-		err := service.httpServer.ListenAndServe()
+		err := adapter.httpServer.ListenAndServe()
 		if err != nil {
 			logger.Fatal(err)
 		}
 	}()
 
-	return service, nil
+	return adapter, nil
 }
 
-// Stop stops RESTService
-func (service *RESTService) Stop() error {
+// Stop stops RESTAdapter
+func (adapter *RESTAdapter) Stop() error {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
-		"struct":   "RESTService",
+		"struct":   "RESTAdapter",
 		"function": "Stop",
 	})
 
-	logger.Infof("Stopping the REST service\n")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := service.httpServer.Shutdown(ctx)
+	err := adapter.httpServer.Shutdown(ctx)
 	if err != nil {
 		logger.Error(err)
 		return err
 	}
-	logger.Infof("Stopped the REST service service\n")
 
 	return nil
 }
