@@ -6,7 +6,6 @@ import (
 	"github.com/lab-paper-code/ksv/volume-service/k8s"
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 )
 
 type Logic struct {
@@ -44,7 +43,7 @@ func (logic *Logic) ListDevices() ([]types.Device, error) {
 	return logic.dbAdapter.ListDevices()
 }
 
-func (logic *Logic) GetDevice(id string, authkey string) (*types.Device, error) {
+func (logic *Logic) GetDevice(id string) (*types.Device, error) {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
@@ -58,11 +57,7 @@ func (logic *Logic) GetDevice(id string, authkey string) (*types.Device, error) 
 		return nil, err
 	}
 
-	if types.CheckAuthKey(device.ID, device.Password, authkey) {
-		return device, nil
-	}
-
-	return nil, xerrors.Errorf("failed to get the device with id %s due to wrong password", id)
+	return device, nil
 }
 
 func (logic *Logic) InsertDevice(device *types.Device) error {

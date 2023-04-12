@@ -26,6 +26,11 @@ func NewDeviceID() string {
 	return deviceIDPrefix + xid.New().String()
 }
 
+func (device *Device) CheckAuthKey(authKey string) bool {
+	expectedAuthKey := GetAuthKey(device.ID, device.Password)
+	return expectedAuthKey == authKey
+}
+
 func (device *Device) GetRedacted() Device {
 	dev := Device{}
 

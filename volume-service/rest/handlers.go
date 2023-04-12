@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 )
 
 // setupRouter setup http request router
@@ -90,11 +91,18 @@ func (adapter *RESTAdapter) handleGetDevice(c *gin.Context) {
 		logger.Infof("authKey %s", authKey)
 	}
 
-	device, err := adapter.logic.GetDevice(id, authKey)
+	device, err := adapter.logic.GetDevice(id)
 	if err != nil {
 		// fail
 		logger.Error(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !device.CheckAuthKey(authKey) {
+		err = xerrors.Errorf("failed to get device %s, wrong authorization key", id)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -138,7 +146,7 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 		Description: input.Description,
 	}
 
-	logger.Debugf("ID: %s\tIP: %s\tPassword: %s\tStorageSize: %d", device.ID, device.IP, device.Password, storageSizeNum)
+	logger.Debugf("ID: %s\tIP: %s\tStorageSize: %d", device.ID, device.IP, storageSizeNum)
 
 	err = adapter.logic.InsertDevice(&device)
 	if err != nil {
