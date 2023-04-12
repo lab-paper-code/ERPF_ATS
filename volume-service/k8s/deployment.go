@@ -1,16 +1,6 @@
 package k8s
 
-import (
-	"context"
-	"fmt"
-
-	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-)
-
+/*
 const (
 	deployWebdavSuffix         string = "-webdav"
 	deployWebdavNamespace      string = "vd"
@@ -23,7 +13,7 @@ const (
 // https://github.com/kubernetes-client/go/blob/master/kubernetes/docs/V1DeploymentList.md
 
 // WEBDAV
-/*
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,7 +33,7 @@ spec:
       containers:
       - name: webdav
         image: yechae/ksv-webdav:v1
-        imagePullPolicy: IfNotPresent 
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
         livenessProbe:
@@ -93,7 +83,7 @@ spec:
       # uncomment if registry keys are specified
       #imagePullSecrets:
       #- name: <secret_name>
-*/
+
 
 
 func (client *K8sClient) getDeployWebdavName(volumeID string) string {
@@ -125,7 +115,7 @@ func (client *K8sClient) CreateWebdavDeploy(username string, volumeID string) er
 
 	logger.Debugf("Creating a Webdav Deploy for user %s, volume id %s", username, volumeID)
 
-	deployWebdavName := client.getDeployWebdavName(volumeID)	
+	deployWebdavName := client.getDeployWebdavName(volumeID)
 	deployReplicas := int32(1)
 
 	claim := &appsv1.Deployment{
@@ -153,28 +143,28 @@ func (client *K8sClient) CreateWebdavDeploy(username string, volumeID string) er
 					{
 						Name: "webdav",
 						Image: "yechae/ksv-webdav:v2",
-						Ports: []corev1.ContainerPort{ 
+						Ports: []corev1.ContainerPort{
 							{
 								ContainerPort: 80,
 							},
 						},
-						 LivenessProbe: &corev1.Probe{   
+						 LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{ 
+								HTTPGet: &corev1.HTTPGetAction{
 								Path: "/",
 								Port: intstr.FromInt(80),
 							},
-						 	}, 
+						 	},
 						 	InitialDelaySeconds: 10,
 						 	PeriodSeconds: 10,
 						 	FailureThreshold: 3,
 						 },
 						 ReadinessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{ 
+								HTTPGet: &corev1.HTTPGetAction{
 									Path: "/",
 									Port: intstr.FromInt(80),
-								}, 
+								},
 							},
           				 	InitialDelaySeconds: 10,
           				 	PeriodSeconds: 10,
@@ -182,7 +172,7 @@ func (client *K8sClient) CreateWebdavDeploy(username string, volumeID string) er
 						 },
 						//  Resources: corev1.ResourceRequirements{
 						//  	Requests: corev1.ResourceList{
-							
+
 						//  	}
 						//  }
 						//meatav1, appsv1, corev1
@@ -230,15 +220,15 @@ func (client *K8sClient) CreateWebdavDeploy(username string, volumeID string) er
 									ClaimName: client.getPVCName(volumeID),
 								},
 
-							},		
-						},				
+							},
+						},
 					},
 					RestartPolicy: "Always",
 				},//spec
 			},
 			},
 		}
-	
+
 
 	deployclient := client.clientSet.AppsV1().Deployments(client.getDeployNamespace())
 
@@ -273,7 +263,7 @@ func (client *K8sClient) CreateWebdavDeploy(username string, volumeID string) er
 
 	return nil
 }
-
+*/
 
 //APP
 /*
@@ -309,14 +299,15 @@ spec:
               cpu: "250m"
             limits:
               cpu: "500m"
-        
+
       volumes:
       - name: volumes
         persistentVolumeClaim:
           claimName: pod1-pvc #변경
-      restartPolicy: Always 
+      restartPolicy: Always
 */
 
+/*
 // CreateAppDeploy creates a App deploy for the given volumeID
 func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error {
 	logger := log.WithFields(log.Fields{
@@ -354,7 +345,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 					{
 						Name: "app-image",
 						Image: "yechae/ksv-app:v4",
-						ImagePullPolicy: "IfNotPresent", 
+						ImagePullPolicy: "IfNotPresent",
 						Ports: []corev1.ContainerPort{
 							{
 								ContainerPort: 5000,
@@ -363,7 +354,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 						// Resources: corev1.ResourceRequirements{
 						// 	Requests: map[string]string{
 						// 		cpu: "250m",
-							
+
 						// 	},
 						// 	Limits: map[string]string{
 						// 		cpu: "500m",
@@ -385,15 +376,15 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 								ClaimName: client.getPVCName(volumeID),
 							},
 
-						},		
-					},				
+						},
+					},
 				},
 				RestartPolicy: "Always",
 				},//spec
 			},
 			},
 		}
-	
+
 
 	deployclient := client.clientSet.AppsV1().Deployments(client.getDeployNamespace())
 
@@ -428,4 +419,4 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 
 	return nil
 }
-
+*/

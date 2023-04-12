@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-func SizeStringToNum(s string) uint64 {
+func SizeStringToNum(s string) int64 {
 	regExStr := "^([0-9]+)[ ]*([tTgGmMkK]*[bB]?)$"
 
 	reg := regexp.MustCompile(regExStr)
 	matches := reg.FindStringSubmatch(s)
 
-	np := uint64(0)
+	np := int64(0)
 	if len(matches) >= 2 {
-		size, err := strconv.ParseUint(matches[1], 10, 64)
+		size, err := strconv.ParseInt(matches[1], 10, 64)
 		if err != nil {
 			return np
 		}

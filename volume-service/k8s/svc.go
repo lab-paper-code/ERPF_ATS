@@ -1,21 +1,13 @@
 package k8s
 
-import (
-	"context"
-	"fmt"
-
-	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
+/*
 const (
 	svcWebdavSuffix         string = "-webdav-svc"
 	svcAppSuffix            string = "-app-svc"
 	svcNamespace            string = "vd"
 )
 
-/*
+
 ---
 apiVersion: v1
 kind: Service
@@ -29,7 +21,7 @@ spec:
   selector:
     app: pod1-app-svc #변경
   type: Clust
-*/
+
 
 // getWebdavSvcName makes webdavSvc name
 func (client *K8sClient) getWebdavSVCName(volumeID string) string {
@@ -132,7 +124,7 @@ func (client *K8sClient) getSvcNamespace() string {
 	print("\n func FINISH")
 
 	return nil
-}*/
+}
 
 // CreatePVC creates a pvc for the given volumeID
 func (client *K8sClient) CreateWebdavSVC(username string, volumeID string) error {
@@ -260,3 +252,4 @@ func (client *K8sClient) CreateAppSVC(username string, volumeID string) error {
 
 	return nil
 }
+*/

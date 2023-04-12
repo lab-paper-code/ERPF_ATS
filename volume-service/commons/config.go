@@ -15,10 +15,11 @@ const (
 	defaultRestAdminUsername string = "admin"
 	defaultRestAdminPassword string = "letmein"
 	defaultRestPort          int    = 31200
+	defaultKubeConfigPath    string = "~/.kube/config"
 	defaultLogLevel          string = "fatal"
 	defaultDBUsername        string = "root"
 	defaultDBPassword        string = "root"
-	defaultDBName            string = "root"
+	defaultDBName            string = "ksv"
 	defaultDBAddress         string = "localhost:3306"
 )
 
@@ -27,6 +28,9 @@ type Config struct {
 	RestAdminUsername string `yaml:"rest_admin_username,omitempty" json:"rest_admin_username,omitempty" envconfig:"VOLUME_SERVICE_REST_ADMIN_USERNAME"`
 	RestAdminPassword string `yaml:"rest_admin_password,omitempty" json:"rest_admin_password,omitempty" envconfig:"VOLUME_SERVICE_REST_ADMIN_PASSWORD"`
 	RestPort          int    `yaml:"rest_port,omitempty" json:"rest_port,omitempty" envconfig:"VOLUME_SERVICE_REST_PORT"`
+
+	// Kubernetes related
+	KubeConfigPath string `yaml:"kube_config_path,omitempty" json:"kube_config_path,omitempty" envconfig:"VOLUME_SERVICE_KUBE_CONFIG_PATH"`
 
 	// DB related
 	DBUsername string `yaml:"db_username,omitempty" json:"db_username,omitempty" envconfig:"VOLUME_SERVICE_DB_USERNAME"`
@@ -54,6 +58,7 @@ func GetDefaultConfig() *Config {
 		RestAdminUsername: defaultRestAdminUsername,
 		RestAdminPassword: defaultRestAdminPassword,
 		RestPort:          defaultRestPort,
+		KubeConfigPath:    defaultKubeConfigPath,
 		DBUsername:        defaultDBUsername,
 		DBPassword:        defaultDBPassword,
 		DBAddress:         defaultDBAddress,

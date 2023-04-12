@@ -11,6 +11,6 @@ func TestAuth(t *testing.T) {
 }
 
 func testAuth(t *testing.T) {
-	auth := CheckAuthKey("id21", "pw33", "aWQyMTpwdzMz")
-	assert.True(t, auth)
+	auth := GetAuthKey("id21", "pw33")
+	assert.Equal(t, "aWQyMTpwdzMz", auth)
 }

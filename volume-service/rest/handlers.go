@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 )
 
 // setupRouter setup http request router
@@ -90,11 +91,18 @@ func (adapter *RESTAdapter) handleGetDevice(c *gin.Context) {
 		logger.Infof("authKey %s", authKey)
 	}
 
-	device, err := adapter.logic.GetDevice(id, authKey)
+	device, err := adapter.logic.GetDevice(id)
 	if err != nil {
 		// fail
 		logger.Error(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !device.CheckAuthKey(authKey) {
+		err = xerrors.Errorf("failed to get device %s, wrong authorization key", id)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -114,7 +122,7 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 	type deviceRegistrationRequest struct {
 		IP          string `json:"ip"`
 		Password    string `json:"password"`
-		StorageSize string `json:"storage_size"`
+		VolumeSize  string `json:"volume_size"`
 		Description string `json:"description,omitempty"`
 	}
 
@@ -128,17 +136,17 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 		return
 	}
 
-	storageSizeNum := types.SizeStringToNum(input.StorageSize)
+	volumeSizeNum := types.SizeStringToNum(input.VolumeSize)
 
 	device := types.Device{
 		IP:          input.IP,
 		ID:          types.NewDeviceID(),
 		Password:    input.Password,
-		StorageSize: storageSizeNum,
+		VolumeSize:  volumeSizeNum,
 		Description: input.Description,
 	}
 
-	logger.Debugf("ID: %s\tIP: %s\tPassword: %s\tStorageSize: %d", device.ID, device.IP, device.Password, storageSizeNum)
+	logger.Debugf("ID: %s\tIP: %s\tVolumeSize: %d", device.ID, device.IP, volumeSizeNum)
 
 	err = adapter.logic.InsertDevice(&device)
 	if err != nil {

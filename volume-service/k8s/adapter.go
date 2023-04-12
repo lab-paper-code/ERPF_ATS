@@ -1,18 +1,47 @@
 package k8s
 
 import (
+	"time"
+
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	k8sTimeout time.Duration = 30 * time.Second
 )
 
 type K8SAdapter struct {
-	config *commons.Config
+	config     *commons.Config
+	kubeConfig *rest.Config
+	clientSet  *kubernetes.Clientset
 }
 
 // Start starts K8SAdapter
 func Start(config *commons.Config) (*K8SAdapter, error) {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"function": "Start",
+	})
+
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfigPath)
+	if err != nil {
+		logger.Error(err)
+		return nil, err
+	}
+
+	clientSet, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	service := &K8SAdapter{
-		config: config,
+		config:     config,
+		kubeConfig: kubeConfig,
+		clientSet:  clientSet,
 	}
 
 	return service, nil
@@ -20,115 +49,5 @@ func Start(config *commons.Config) (*K8SAdapter, error) {
 
 // Stop stops K8SAdapter
 func (adapter *K8SAdapter) Stop() error {
-	return nil
-}
-
-func (adapter *K8SAdapter) CreatePV(volID string) error {
-	logger := log.WithFields(log.Fields{
-		"package":  "k8s",
-		"struct":   "K8SAdapter",
-		"function": "CreatePV",
-	})
-
-	logger.Info("received CreatePV()")
-
-	/*
-		volumeID := fmt.Sprintf("%s%d", "ksv", idx)
-
-		// //pvc
-
-		k8sClient, err := k8s.NewK8sClient("/home/palisade2/.kube/config")
-		if err != nil {
-			panic(err)
-		}
-
-		//make PVC
-		err = k8sClient.CreatePVC(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make webdav deploy
-		err = k8sClient.CreateWebdavDeploy(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make App deploy
-		err = k8sClient.CreateAppDeploy(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make webdav service
-		err = k8sClient.CreateWebdavSVC(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make App service
-		err = k8sClient.CreateAppSVC(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make Webdav ingress
-		err = k8sClient.CreateWebdavIngress(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make App ingress
-		err = k8sClient.CreateAppIngress(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		err = k8sClient.WaitPodRun3(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		logger.Infof("All pods in podname=\"%s\" are running!", volumeID)
-
-		execCommand := "sed -i -e 's#Alias /uploads \"/uploads\"#Alias /" + volumeID + "/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf"
-		//change webdav path using volumeID
-		err = k8sClient.ExecInPod("vd", volumeID, execCommand)
-		if err != nil {
-			panic(err)
-		}
-
-		execCommand = "/usr/sbin/httpd -k restart"
-		err = k8sClient.ExecInPod("vd", volumeID, execCommand)
-		if err != nil {
-			panic(err)
-		}
-
-		//TODO:  k8s resource들 생성한 후
-		//1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumdID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
-		//2. app pod으로 http://ip:60000/hello_flask?ip=<ip> 해서 dom ip 알려주기
-
-		type Output struct {
-			Mount  string       `json:mountPath`
-			Device types.Device `json: device`
-		}
-
-		Mount := "http://155.230.36.27/" + volumeID + "/uploads"
-
-		device = types.Device{
-			IP:       input.IP,
-			ID:       volumeID,
-			Username: input.Username,
-			Password: input.Password,
-			Storage:  input.Storage,
-		}
-
-		output := Output{
-			Mount:  Mount,
-			Device: device,
-		}
-	*/
-
-	// TODO: implement this
 	return nil
 }
