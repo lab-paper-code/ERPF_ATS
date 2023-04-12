@@ -1,19 +1,6 @@
 package k8s
 
-import (
-	"context"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/remotecommand"
-	"fmt"
-	"os"
-
-)
-
-
+/*
 //webdav exec
 //sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumdID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf
 
@@ -45,7 +32,7 @@ func (client *K8sClient) ExecInPod(namespace string, volumeID string, command st
 
 	// Prepare the API URL used to execute another process within the Pod.  In
     // this case, we'll run a remote shell.
-	
+
 
 	podLabel := client.getDeployWebdavName(volumeID)
 	pods, err := client.clientSet.CoreV1().Pods("vd").List(context.Background(), metav1.ListOptions{
@@ -71,11 +58,11 @@ func (client *K8sClient) ExecInPod(namespace string, volumeID string, command st
 
 
 	fmt.Println(execCommand)
-	req := coreclient.RESTClient().             
+	req := coreclient.RESTClient().
 	Post().
 	Namespace(namespace).
 	Resource("pods").
-	Name(podName).  
+	Name(podName).
 	SubResource("exec").
 	VersionedParams(&corev1.PodExecOptions{
 		    // Container: podObj.Spec.Containers[0].Name,
@@ -87,7 +74,7 @@ func (client *K8sClient) ExecInPod(namespace string, volumeID string, command st
 	}, scheme.ParameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(restconfig, "POST", req.URL())
-	
+
 	err = exec.Stream(remotecommand.StreamOptions{
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
@@ -187,3 +174,4 @@ func (client *K8sClient) WaitPodRun3(username string, volumeID string) error {
 
 	return nil
 }
+*/

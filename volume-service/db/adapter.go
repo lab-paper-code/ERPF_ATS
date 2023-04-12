@@ -39,7 +39,7 @@ func RemoveDBFile(config *commons.Config) error {
 	fi, err := os.Stat(absPath)
 	if err == nil && !fi.IsDir() {
 		// exist
-		logger.Infof("Removing db file %s", absPath)
+		logger.Debugf("Removing db file %s", absPath)
 		return os.RemoveAll(SQLiteDBFileName)
 	}
 

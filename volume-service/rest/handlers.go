@@ -122,7 +122,7 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 	type deviceRegistrationRequest struct {
 		IP          string `json:"ip"`
 		Password    string `json:"password"`
-		StorageSize string `json:"storage_size"`
+		VolumeSize  string `json:"volume_size"`
 		Description string `json:"description,omitempty"`
 	}
 
@@ -136,17 +136,17 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 		return
 	}
 
-	storageSizeNum := types.SizeStringToNum(input.StorageSize)
+	volumeSizeNum := types.SizeStringToNum(input.VolumeSize)
 
 	device := types.Device{
 		IP:          input.IP,
 		ID:          types.NewDeviceID(),
 		Password:    input.Password,
-		StorageSize: storageSizeNum,
+		VolumeSize:  volumeSizeNum,
 		Description: input.Description,
 	}
 
-	logger.Debugf("ID: %s\tIP: %s\tStorageSize: %d", device.ID, device.IP, storageSizeNum)
+	logger.Debugf("ID: %s\tIP: %s\tVolumeSize: %d", device.ID, device.IP, volumeSizeNum)
 
 	err = adapter.logic.InsertDevice(&device)
 	if err != nil {

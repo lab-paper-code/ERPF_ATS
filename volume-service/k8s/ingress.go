@@ -1,17 +1,11 @@
 package k8s
 
-import (
-	"context"
-	"fmt"
+// corev1 "k8s.io/api/core/v1"
+// resourcev1 "k8s.io/apimachinery/pkg/api/resource"
 
-	log "github.com/sirupsen/logrus"
-	// corev1 "k8s.io/api/core/v1"
-	// resourcev1 "k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	//"k8s.io/api/networking/v1beta1"
-)
+//"k8s.io/api/networking/v1beta1"
 
+/*
 const (
 	ingWebdavSuffix         string = "-webdav-ing"
 	ingAppSuffix            string = "-app-ing"
@@ -20,7 +14,7 @@ const (
 	ingAppPathSuffix		string = "/app/"
 )
 
-/*
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -35,14 +29,14 @@ spec:
     - host:
       http:
         paths:
-          - path: /pod1  # 변경 # volumeID 로 
+          - path: /pod1  # 변경 # volumeID 로
             pathType: Prefix
             backend:
               service:
-                name: webdav-pod1-svc # 변경 
+                name: webdav-pod1-svc # 변경
                 port:
                   number: 80
-*/
+
 
 // getWebdavSvcName makes webdavIngress name
 func (client *K8sClient) getWebdavIngressName(volumeID string) string {
@@ -292,3 +286,4 @@ func (client *K8sClient) CreateAppIngress(username string, volumeID string) erro
 
 	return nil
 }
+*/

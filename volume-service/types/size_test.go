@@ -12,17 +12,17 @@ func TestSize(t *testing.T) {
 
 func testSize(t *testing.T) {
 	size := SizeStringToNum("1024")
-	assert.Equal(t, uint64(1024), size)
+	assert.Equal(t, 1024, size)
 
 	size = SizeStringToNum("1024K")
-	assert.Equal(t, uint64(1024*1024), size)
+	assert.Equal(t, 1024*1024, size)
 
 	size = SizeStringToNum("1024kb")
-	assert.Equal(t, uint64(1024*1024), size)
+	assert.Equal(t, 1024*1024, size)
 
 	size = SizeStringToNum("1024Mb")
-	assert.Equal(t, uint64(1024*1024*1024), size)
+	assert.Equal(t, 1024*1024*1024, size)
 
 	size = SizeStringToNum("1024gb")
-	assert.Equal(t, uint64(1024*1024*1024*1024), size)
+	assert.Equal(t, 1024*1024*1024*1024, size)
 }

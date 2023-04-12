@@ -3,121 +3,169 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"time"
 
+	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
+	apiv1 "k8s.io/api/core/v1"
 	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	pvcSuffix         string = "-pvc"
-	volumeNamespace   string = "vd"
-	storageClassName  string = "rook-cephfs"
-	volumeSizeDefault string = "20Gi"
-
-	k8sTimeout time.Duration = 30 * time.Second
+	volumeNamePrefix      string = "pv"
+	volumeClaimNamePrefix string = "pvc"
+	volumeNamespace       string = "ksv"
+	storageClassName      string = "rook-cephfs"
 )
 
-/*
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: pod1-pvc
-  namespace: ksv
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 20Gi
-  storageClassName: rook-cephfs
-*/
-
-// getPVCName makes pvc name
-func (client *K8sClient) getPVCName(volumeID string) string {
-	return fmt.Sprintf("%s%s", volumeID, pvcSuffix)
-}
-
-func (client *K8sClient) getPVCLabels(username string, volumeID string) map[string]string {
-	return map[string]string{
-		"username":  username,
-		"volume-id": volumeID,
-	}
-}
-
-func (client *K8sClient) getVolumeNamespace() string {
-	return volumeNamespace
-}
-
-func (client *K8sClient) getStorageClassName() string {
+func (adapter *K8SAdapter) GetStorageClassName() string {
 	return storageClassName
 }
 
-func (client *K8sClient) getDefaultVolumeSize() resourcev1.Quantity {
-	quantity, _ := resourcev1.ParseQuantity(volumeSizeDefault)
-	return quantity
+func (adapter *K8SAdapter) GetVolumeName(device *types.Device) string {
+	return fmt.Sprintf("%s_%s", volumeNamePrefix, device.ID)
 }
 
-// CreatePVC creates a pvc for the given volumeID
-func (client *K8sClient) CreatePVC(username string, volumeID string) error {
+func (adapter *K8SAdapter) GetVolumeClaimName(device *types.Device) string {
+	return fmt.Sprintf("%s_%s", volumeClaimNamePrefix, device.ID)
+}
+
+func (adapter *K8SAdapter) GetVolumeLabels(device *types.Device) map[string]string {
+	labels := map[string]string{}
+	labels["volume-name"] = adapter.GetVolumeName(device)
+	labels["device-id"] = device.ID
+	return labels
+}
+
+func (adapter *K8SAdapter) CreatePV(device *types.Device) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
-		"struct":   "K8sClient",
-		"function": "CreatePVC",
+		"struct":   "K8SAdapter",
+		"function": "CreatePV",
 	})
 
-	logger.Debugf("Creating a PVC for user %s, volume id %s", username, volumeID)
+	logger.Debugf("received CreatePV()")
 
-	scName := client.getStorageClassName()
+	volumeName := adapter.GetVolumeName(device)
+	volumeLabels := adapter.GetVolumeLabels(device)
 
-	claim := &corev1.PersistentVolumeClaim{
+	volumeSize := resourcev1.Quantity{
+		Format: resourcev1.BinarySI,
+	}
+	volumeSize.Set(device.VolumeSize)
+
+	volmode := apiv1.PersistentVolumeFilesystem
+
+	pv := &apiv1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      client.getPVCName(volumeID),
-			Labels:    client.getPVCLabels(username, volumeID),
-			Namespace: client.getVolumeNamespace(),
+			Name:      volumeName,
+			Labels:    volumeLabels,
+			Namespace: volumeNamespace,
 		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteMany,
+		Spec: apiv1.PersistentVolumeSpec{
+			Capacity: apiv1.ResourceList{
+				apiv1.ResourceStorage: volumeSize,
 			},
-			StorageClassName: &scName,
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: client.getDefaultVolumeSize(),
+			VolumeMode: &volmode,
+			AccessModes: []apiv1.PersistentVolumeAccessMode{
+				apiv1.ReadWriteMany,
+			},
+			PersistentVolumeReclaimPolicy: apiv1.PersistentVolumeReclaimRetain,
+			StorageClassName:              adapter.GetStorageClassName(),
+			PersistentVolumeSource: apiv1.PersistentVolumeSource{
+				CSI: &apiv1.CSIPersistentVolumeSource{
+					// TODO: Add Ceph-CSI configuration here
 				},
 			},
 		},
 	}
 
-	pvcclient := client.clientSet.CoreV1().PersistentVolumeClaims(client.getVolumeNamespace())
-
-	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(context.Background(), k8sTimeout)
 	defer cancel()
 
-	_, err := pvcclient.Get(ctx, claim.GetName(), metav1.GetOptions{})
+	pvclient := adapter.clientSet.CoreV1().PersistentVolumes()
+	_, err := pvclient.Get(ctx, pv.GetName(), metav1.GetOptions{})
 	if err != nil {
-		// failed to get an existing claim
-		_, err = pvcclient.Create(ctx, claim, metav1.CreateOptions{})
-		if err != nil {
-			// failed to create one
-			logger.Errorf("Failed to create a PVC for user %s, volume id %s", username, volumeID)
-			return err
+		// does not exist
+		_, createErr := pvclient.Create(ctx, pv, metav1.CreateOptions{})
+		if createErr != nil {
+			return createErr
 		}
-
-		logger.Debugf("Created a PVC for user %s, volume id %s", username, volumeID)
 	} else {
-		_, err = pvcclient.Update(ctx, claim, metav1.UpdateOptions{})
-		if err != nil {
-			// failed to create one
-			logger.Errorf("Failed to update a PVC for user %s, volume id %s", username, volumeID)
-			return err
+		// exist -> update
+		_, updateErr := pvclient.Update(ctx, pv, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
 		}
+	}
 
-		logger.Debugf("Updated a PVC for user %s, volume id %s", username, volumeID)
+	return nil
+}
+
+func (adapter *K8SAdapter) CreatePVC(device *types.Device) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "CreatePVC",
+	})
+
+	logger.Debugf("received CreatePVC()")
+
+	volumeName := adapter.GetVolumeName(device)
+	volumeClaimName := adapter.GetVolumeClaimName(device)
+	volumeLabels := adapter.GetVolumeLabels(device)
+
+	// we request very small size volume to match any pv available
+	// TODO: double check if this pvc can bind to pv
+	volumeSize := resourcev1.Quantity{
+		Format: resourcev1.BinarySI,
+	}
+	volumeSize.Set(1024)
+
+	storageClassName := adapter.GetStorageClassName()
+
+	pvc := &apiv1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      volumeClaimName,
+			Labels:    volumeLabels,
+			Namespace: volumeNamespace,
+		},
+		Spec: apiv1.PersistentVolumeClaimSpec{
+			VolumeName: volumeName,
+			AccessModes: []apiv1.PersistentVolumeAccessMode{
+				apiv1.ReadWriteMany,
+			},
+			Resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					apiv1.ResourceStorage: volumeSize,
+				},
+			},
+			StorageClassName: &storageClassName,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"volume-name": volumeName,
+				},
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), k8sTimeout)
+	defer cancel()
+
+	pvcclient := adapter.clientSet.CoreV1().PersistentVolumeClaims(volumeNamespace)
+	_, err := pvcclient.Get(ctx, pvc.GetName(), metav1.GetOptions{})
+	if err != nil {
+		// does not exist
+		_, createErr := pvcclient.Create(ctx, pvc, metav1.CreateOptions{})
+		if createErr != nil {
+			return createErr
+		}
+	} else {
+		// exist -> update
+		_, updateErr := pvcclient.Update(ctx, pvc, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
 	}
 
 	return nil
