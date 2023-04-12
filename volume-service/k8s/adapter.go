@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	k8sTimeout time.Duration = 30 * time.Second
+	operationTimeout time.Duration = 30 * time.Second
+	objectNamespace  string        = "ksv"
 )
 
 type K8SAdapter struct {
