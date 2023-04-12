@@ -93,6 +93,14 @@ func (logic *Logic) MountVolume(device *types.Device) error {
 		return err
 	}
 
+	volumeName := logic.k8sAdapter.GetVolumeName(device)
+
+	logger.Debug("creating Webdav Deployment for device %s, volume %s", device.ID, volumeName)
+	err = logic.k8sAdapter.CreateWebdavDeployment(device)
+	if err != nil {
+		return err
+	}
+
 	/*
 		//make webdav deploy
 		err = k8sClient.CreateWebdavDeploy(input.Username, volumeID)

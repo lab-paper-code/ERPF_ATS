@@ -14,7 +14,7 @@ import (
 const (
 	volumeNamePrefix      string = "pv"
 	volumeClaimNamePrefix string = "pvc"
-	volumeNamespace       string = "ksv"
+	volumeNamespace       string = objectNamespace
 	storageClassName      string = "rook-cephfs"
 )
 
@@ -37,6 +37,11 @@ func (adapter *K8SAdapter) GetVolumeLabels(device *types.Device) map[string]stri
 	return labels
 }
 
+func (adapter *K8SAdapter) getCephCSIPersistentVolumeSource(device *types.Device) *apiv1.CSIPersistentVolumeSource {
+	// TODO: Implement this
+	return nil
+}
+
 func (adapter *K8SAdapter) CreatePV(device *types.Device) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
@@ -44,7 +49,7 @@ func (adapter *K8SAdapter) CreatePV(device *types.Device) error {
 		"function": "CreatePV",
 	})
 
-	logger.Debugf("received CreatePV()")
+	logger.Debug("received CreatePV()")
 
 	volumeName := adapter.GetVolumeName(device)
 	volumeLabels := adapter.GetVolumeLabels(device)
@@ -55,6 +60,8 @@ func (adapter *K8SAdapter) CreatePV(device *types.Device) error {
 	volumeSize.Set(device.VolumeSize)
 
 	volmode := apiv1.PersistentVolumeFilesystem
+
+	cephCSIPersistentVolumeSource := adapter.getCephCSIPersistentVolumeSource(device)
 
 	pv := &apiv1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
@@ -73,14 +80,12 @@ func (adapter *K8SAdapter) CreatePV(device *types.Device) error {
 			PersistentVolumeReclaimPolicy: apiv1.PersistentVolumeReclaimRetain,
 			StorageClassName:              adapter.GetStorageClassName(),
 			PersistentVolumeSource: apiv1.PersistentVolumeSource{
-				CSI: &apiv1.CSIPersistentVolumeSource{
-					// TODO: Add Ceph-CSI configuration here
-				},
+				CSI: cephCSIPersistentVolumeSource,
 			},
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), k8sTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
 	pvclient := adapter.clientSet.CoreV1().PersistentVolumes()
@@ -109,7 +114,7 @@ func (adapter *K8SAdapter) CreatePVC(device *types.Device) error {
 		"function": "CreatePVC",
 	})
 
-	logger.Debugf("received CreatePVC()")
+	logger.Debug("received CreatePVC()")
 
 	volumeName := adapter.GetVolumeName(device)
 	volumeClaimName := adapter.GetVolumeClaimName(device)
@@ -149,7 +154,7 @@ func (adapter *K8SAdapter) CreatePVC(device *types.Device) error {
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), k8sTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
 	pvcclient := adapter.clientSet.CoreV1().PersistentVolumeClaims(volumeNamespace)
