@@ -14,5 +14,8 @@
 *.out
 .vscode
 
+io_tracing/strace_outputs/
+io_tracing/images/
+
 **/__pycache__/
 **/bin/
