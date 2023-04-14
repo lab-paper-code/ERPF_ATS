@@ -32,12 +32,6 @@ type Config struct {
 	// Kubernetes related
 	KubeConfigPath string `yaml:"kube_config_path,omitempty" json:"kube_config_path,omitempty" envconfig:"VOLUME_SERVICE_KUBE_CONFIG_PATH"`
 
-	// DB related
-	DBUsername string `yaml:"db_username,omitempty" json:"db_username,omitempty" envconfig:"VOLUME_SERVICE_DB_USERNAME"`
-	DBPassword string `yaml:"db_password,omitempty" json:"db_password,omitempty" envconfig:"VOLUME_SERVICE_DB_PASSWORD"`
-	DBAddress  string `yaml:"db_address,omitempty" json:"db_address,omitempty" envconfig:"VOLUME_SERVICE_DB_ADDRESS"`
-	DBName     string `yaml:"db_name,omitempty" json:"db_name,omitempty" envconfig:"VOLUME_SERVICE_DB_NAME"`
-
 	LogLevel string `yaml:"log_level,omitempty" json:"log_level,omitempty" envconfig:"VOLUME_SERVICE_LOG_LEVEL"`
 }
 
@@ -59,10 +53,6 @@ func GetDefaultConfig() *Config {
 		RestAdminPassword: defaultRestAdminPassword,
 		RestPort:          defaultRestPort,
 		KubeConfigPath:    defaultKubeConfigPath,
-		DBUsername:        defaultDBUsername,
-		DBPassword:        defaultDBPassword,
-		DBAddress:         defaultDBAddress,
-		DBName:            defaultDBName,
 		LogLevel:          defaultLogLevel,
 	}
 }
