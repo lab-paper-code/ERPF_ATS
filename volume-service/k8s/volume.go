@@ -30,13 +30,15 @@ func (adapter *K8SAdapter) GetVolumeClaimName(device *types.Device) string {
 	return fmt.Sprintf("%s_%s", volumeClaimNamePrefix, device.ID)
 }
 
-func (adapter *K8SAdapter) GetVolumeLabels(device *types.Device) map[string]string {
+func (adapter *K8SAdapter) getVolumeLabels(device *types.Device) map[string]string {
 	labels := map[string]string{}
 	labels["volume-name"] = adapter.GetVolumeName(device)
 	labels["device-id"] = device.ID
 	return labels
 }
 
+/*
+// We don't need to create PV as it is created dynamically by ceph csi driver
 func (adapter *K8SAdapter) getCephCSIPersistentVolumeSource(device *types.Device) *apiv1.CSIPersistentVolumeSource {
 	// TODO: Implement this
 	return nil
@@ -52,7 +54,7 @@ func (adapter *K8SAdapter) CreatePV(device *types.Device) error {
 	logger.Debug("received CreatePV()")
 
 	volumeName := adapter.GetVolumeName(device)
-	volumeLabels := adapter.GetVolumeLabels(device)
+	volumeLabels := adapter.getVolumeLabels(device)
 
 	volumeSize := resourcev1.Quantity{
 		Format: resourcev1.BinarySI,
@@ -106,6 +108,7 @@ func (adapter *K8SAdapter) CreatePV(device *types.Device) error {
 
 	return nil
 }
+*/
 
 func (adapter *K8SAdapter) CreatePVC(device *types.Device) error {
 	logger := log.WithFields(log.Fields{
@@ -118,7 +121,7 @@ func (adapter *K8SAdapter) CreatePVC(device *types.Device) error {
 
 	volumeName := adapter.GetVolumeName(device)
 	volumeClaimName := adapter.GetVolumeClaimName(device)
-	volumeLabels := adapter.GetVolumeLabels(device)
+	volumeLabels := adapter.getVolumeLabels(device)
 
 	// we request very small size volume to match any pv available
 	// TODO: double check if this pvc can bind to pv

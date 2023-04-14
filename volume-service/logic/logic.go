@@ -81,14 +81,14 @@ func (logic *Logic) MountVolume(device *types.Device) error {
 
 	logger.Debug("received MountVolume()")
 
-	logger.Debug("creating PV for device %s", device.ID)
-	err := logic.k8sAdapter.CreatePV(device)
-	if err != nil {
-		return err
-	}
+	//logger.Debug("creating PV for device %s", device.ID)
+	//err := logic.k8sAdapter.CreatePV(device)
+	//if err != nil {
+	//	return err
+	//}
 
 	logger.Debug("creating PVC for device %s", device.ID)
-	err = logic.k8sAdapter.CreatePVC(device)
+	err := logic.k8sAdapter.CreatePVC(device)
 	if err != nil {
 		return err
 	}
@@ -102,12 +102,6 @@ func (logic *Logic) MountVolume(device *types.Device) error {
 	}
 
 	/*
-		//make webdav deploy
-		err = k8sClient.CreateWebdavDeploy(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
 		//make App deploy
 		err = k8sClient.CreateAppDeploy(input.Username, volumeID)
 		if err != nil {
