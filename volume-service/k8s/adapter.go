@@ -28,7 +28,13 @@ func Start(config *commons.Config) (*K8SAdapter, error) {
 		"function": "Start",
 	})
 
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfigPath)
+	kubeConfigPath, err := commons.ExpandHomeDir(config.KubeConfigPath)
+	if err != nil {
+		logger.Error(err)
+		return nil, err
+	}
+
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
