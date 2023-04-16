@@ -7,6 +7,10 @@ import (
 )
 
 func SizeStringToNum(s string) int64 {
+	if s == "" {
+		return 0
+	}
+
 	regExStr := "^([0-9]+)[ ]*([tTgGmMkK]*[bB]?)$"
 
 	reg := regexp.MustCompile(regExStr)

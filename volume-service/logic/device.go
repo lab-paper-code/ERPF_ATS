@@ -3,8 +3,29 @@ package logic
 import (
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 )
+
+func (logic *Logic) ListDeviceIDPasswordMap() (map[string]string, error) {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "ListDeviceIDPasswordMap",
+	})
+
+	logger.Debug("received ListDeviceIDPasswordMap()")
+
+	devices, err := logic.dbAdapter.ListDevices()
+	if err != nil {
+		return nil, err
+	}
+
+	idPasswordMap := map[string]string{}
+	for _, device := range devices {
+		idPasswordMap[device.ID] = device.Password
+	}
+
+	return idPasswordMap, nil
+}
 
 func (logic *Logic) ListDevices() ([]types.Device, error) {
 	logger := log.WithFields(log.Fields{
@@ -18,7 +39,7 @@ func (logic *Logic) ListDevices() ([]types.Device, error) {
 	return logic.dbAdapter.ListDevices()
 }
 
-func (logic *Logic) GetDevice(id string) (*types.Device, error) {
+func (logic *Logic) GetDevice(deviceID string) (types.Device, error) {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
@@ -27,12 +48,7 @@ func (logic *Logic) GetDevice(id string) (*types.Device, error) {
 
 	logger.Debug("received GetDevice()")
 
-	device, err := logic.dbAdapter.GetDevice(id)
-	if err != nil {
-		return nil, err
-	}
-
-	return device, nil
+	return logic.dbAdapter.GetDevice(deviceID)
 }
 
 func (logic *Logic) InsertDevice(device *types.Device) error {
@@ -47,7 +63,7 @@ func (logic *Logic) InsertDevice(device *types.Device) error {
 	return logic.dbAdapter.InsertDevice(device)
 }
 
-func (logic *Logic) UpdateDeviceIP(id string, ip string) error {
+func (logic *Logic) UpdateDeviceIP(deviceID string, ip string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
@@ -56,12 +72,10 @@ func (logic *Logic) UpdateDeviceIP(id string, ip string) error {
 
 	logger.Debug("received UpdateDeviceIP()")
 
-	// TODO: Implement this
-
-	return xerrors.Errorf("not implemented")
+	return logic.dbAdapter.UpdateDeviceIP(deviceID, ip)
 }
 
-func (logic *Logic) UpdateDevicePassword(id string, password string) error {
+func (logic *Logic) UpdateDevicePassword(deviceID string, password string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
@@ -70,21 +84,5 @@ func (logic *Logic) UpdateDevicePassword(id string, password string) error {
 
 	logger.Debug("received UpdateDevicePassword()")
 
-	// TODO: Implement this
-
-	return xerrors.Errorf("not implemented")
-}
-
-func (logic *Logic) ResizeDeviceVolume(id string, size int64) error {
-	logger := log.WithFields(log.Fields{
-		"package":  "logic",
-		"struct":   "Logic",
-		"function": "ResizeDeviceVolume",
-	})
-
-	logger.Debug("received ResizeDeviceVolume()")
-
-	// TODO: Implement this
-
-	return xerrors.Errorf("not implemented")
+	return logic.dbAdapter.UpdateDevicePassword(deviceID, password)
 }

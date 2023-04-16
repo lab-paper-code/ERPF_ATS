@@ -13,10 +13,9 @@ const (
 
 // Device represents a device, holding all necessary info. about device
 type Device struct {
-	ID       string `json:"id" gorm:"primaryKey"`
-	IP       string `json:"ip"`
-	Password string `json:"password"`
-	//VolumeSize  int64     `json:"volume_size"` // in bytes
+	ID          string    `json:"id" gorm:"primaryKey"`
+	IP          string    `json:"ip"`
+	Password    string    `json:"password"`
 	Description string    `json:"description,omitempty"`
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`

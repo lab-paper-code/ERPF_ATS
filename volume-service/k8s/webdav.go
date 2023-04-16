@@ -27,7 +27,6 @@ func (adapter *K8SAdapter) GetWebdavDeploymentName(device *types.Device) string 
 func (adapter *K8SAdapter) GetWebdavDeploymentLabels(device *types.Device) map[string]string {
 	labels := map[string]string{}
 	labels["webdav-name"] = adapter.GetWebdavDeploymentName(device)
-	labels["volume-name"] = adapter.GetVolumeName(device)
 	labels["device-id"] = device.ID
 	return labels
 }

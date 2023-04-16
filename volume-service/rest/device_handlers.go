@@ -10,44 +10,14 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// setupRouter setup http request router
-func (adapter *RESTAdapter) setupRouter() {
-	adapter.router.GET("/ping", adapter.handlePing)
+// setupDeviceRouter setup http request router for device
+func (adapter *RESTAdapter) setupDeviceRouter() {
+	// any devices can call these APIs
+	adapter.router.GET("/devices", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListDevices)
+	adapter.router.GET("/devices/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetDevice)
 
-	adapter.router.GET("/devices", gin.BasicAuth(adapter.getAdminUserAccounts()), adapter.handleListDevices)
-	adapter.router.GET("/devices/:id", adapter.handleGetDevice)
-	adapter.router.POST("/devices", adapter.handleRegisterDevice)
-	adapter.router.GET("/volumes", adapter.handleListVolumes)
-	adapter.router.GET("/volumes/:id", adapter.handleGetVolume)
-	adapter.router.POST("/volumes", adapter.handleCreateVolume)
-}
-
-func getAuthkeyFromRequest(c *gin.Context) string {
-	authorizationKey := c.Request.Header.Get("Authorization")
-	splitToken := strings.Split(authorizationKey, " ")
-	if len(splitToken) == 2 {
-		return splitToken[1]
-	}
-	return ""
-}
-
-func (adapter *RESTAdapter) handlePing(c *gin.Context) {
-	logger := log.WithFields(log.Fields{
-		"package":  "rest",
-		"struct":   "RESTAdapter",
-		"function": "handlePing",
-	})
-
-	logger.Infof("access request to %s", c.Request.URL)
-
-	type pingOutput struct {
-		Message string `json:"message"`
-	}
-
-	output := pingOutput{
-		Message: "pong",
-	}
-	c.JSON(http.StatusOK, output)
+	// any devices can call these APIs
+	adapter.router.POST("/devices", gin.BasicAuth(adapter.getAdminUserAccounts()), adapter.handleRegisterDevice)
 }
 
 func (adapter *RESTAdapter) handleListDevices(c *gin.Context) {
@@ -59,20 +29,36 @@ func (adapter *RESTAdapter) handleListDevices(c *gin.Context) {
 
 	logger.Infof("access request to %s", c.Request.URL)
 
-	devices, err := adapter.logic.ListDevices()
-	if err != nil {
-		// fail
-		logger.Error(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	user := c.GetString(gin.AuthUserKey)
 
 	type listOutput struct {
 		Devices []types.Device `json:"devices"`
 	}
 
-	output := listOutput{
-		Devices: devices,
+	output := listOutput{}
+
+	if adapter.isAdminUser(user) {
+		// admin - returns all devices
+		devices, err := adapter.logic.ListDevices()
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		output.Devices = devices
+	} else {
+		// device - returns mine
+		device, err := adapter.logic.GetDevice(user)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		output.Devices = []types.Device{device}
 	}
 
 	// success
@@ -88,24 +74,22 @@ func (adapter *RESTAdapter) handleGetDevice(c *gin.Context) {
 
 	logger.Infof("access request to %s", c.Request.URL)
 
-	id := c.Param("id")
-	authKey := getAuthkeyFromRequest(c)
-	if len(authKey) > 0 {
-		logger.Infof("authKey %s", authKey)
+	user := c.GetString(gin.AuthUserKey)
+	deviceID := c.Param("id")
+
+	if !adapter.isAdminUser(user) && deviceID != user {
+		// requestiong other's device info
+		err := xerrors.Errorf("failed to get device %s, you cannot access other device info", deviceID)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
 	}
 
-	device, err := adapter.logic.GetDevice(id)
+	device, err := adapter.logic.GetDevice(deviceID)
 	if err != nil {
 		// fail
 		logger.Error(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	if !device.CheckAuthKey(authKey) {
-		err = xerrors.Errorf("failed to get device %s, wrong authorization key", id)
-		logger.Error(err)
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -123,9 +107,8 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 	logger.Infof("access request to %s", c.Request.URL)
 
 	type deviceRegistrationRequest struct {
-		IP       string `json:"ip"`
-		Password string `json:"password"`
-		//VolumeSize  string `json:"volume_size"`
+		IP          string `json:"ip,omitempty"`
+		Password    string `json:"password"`
 		Description string `json:"description,omitempty"`
 	}
 
@@ -139,23 +122,35 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 		return
 	}
 
-	volumeSizeNum := types.SizeStringToNum(input.VolumeSize)
-
 	device := types.Device{
-		IP:       input.IP,
-		ID:       types.NewDeviceID(),
-		Password: input.Password,
-		//VolumeSize:  volumeSizeNum,
+		ID:          types.NewDeviceID(),
+		IP:          input.IP,
+		Password:    input.Password,
 		Description: input.Description,
 	}
 
-	logger.Debugf("ID: %s\tIP: %s\tVolumeSize: %d", device.ID, device.IP, volumeSizeNum)
+	if len(device.IP) == 0 {
+		remoteAddrFields := strings.Split(c.Request.RemoteAddr, ":")
+		if len(remoteAddrFields) > 0 {
+			device.IP = remoteAddrFields[0]
+		}
+	}
+
+	if len(device.Password) == 0 {
+		// fail
+		err = xerrors.Errorf("password is not given")
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Debugf("ID: %s\tIP: %s", device.ID, device.IP)
 
 	err = adapter.logic.InsertDevice(&device)
 	if err != nil {
 		// fail
 		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

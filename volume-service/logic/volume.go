@@ -6,7 +6,67 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (logic *Logic) MountVolume(device *types.Device) error {
+func (logic *Logic) ListVolumes(deviceID string) ([]types.Volume, error) {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "ListDevices",
+	})
+
+	logger.Debug("received ListVolumes()")
+
+	return logic.dbAdapter.ListVolumes(deviceID)
+}
+
+func (logic *Logic) ListAllVolumes() ([]types.Volume, error) {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "ListAllVolumes",
+	})
+
+	logger.Debug("received ListAllVolumes()")
+
+	return logic.dbAdapter.ListAllVolumes()
+}
+
+func (logic *Logic) GetVolume(volumeID string) (types.Volume, error) {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "GetVolume",
+	})
+
+	logger.Debug("received GetVolume()")
+
+	return logic.dbAdapter.GetVolume(volumeID)
+}
+
+func (logic *Logic) InsertVolume(volume *types.Volume) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "InsertVolume",
+	})
+
+	logger.Debug("received InsertVolume()")
+
+	return logic.dbAdapter.InsertVolume(volume)
+}
+
+func (logic *Logic) ResizeVolume(volumeID string, size int64) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "ResizeVolume",
+	})
+
+	logger.Debug("received ResizeVolume()")
+
+	return logic.dbAdapter.UpdateVolumeSize(volumeID, size)
+}
+
+func (logic *Logic) MountVolume(volumeID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
@@ -21,20 +81,22 @@ func (logic *Logic) MountVolume(device *types.Device) error {
 	//	return err
 	//}
 
-	logger.Debugf("creating PVC for device %s", device.ID)
-	err := logic.k8sAdapter.CreatePVC(device)
-	if err != nil {
-		return err
-	}
+	/*
 
-	volumeName := logic.k8sAdapter.GetVolumeName(device)
+		logger.Debugf("creating PVC for device %s", device.ID)
+		err := logic.k8sAdapter.CreatePVC(device)
+		if err != nil {
+			return err
+		}
 
-	logger.Debugf("creating Webdav Deployment for device %s, volume %s", device.ID, volumeName)
-	err = logic.k8sAdapter.CreateWebdavDeployment(device)
-	if err != nil {
-		return err
-	}
+		volumeName := logic.k8sAdapter.GetVolumeName(device)
 
+		logger.Debugf("creating Webdav Deployment for device %s, volume %s", device.ID, volumeName)
+		err = logic.k8sAdapter.CreateWebdavDeployment(device)
+		if err != nil {
+			return err
+		}
+	*/
 	/*
 		//make App deploy
 		err = k8sClient.CreateAppDeploy(input.Username, volumeID)
@@ -113,7 +175,7 @@ func (logic *Logic) MountVolume(device *types.Device) error {
 	return nil
 }
 
-func (logic *Logic) UnountVolume(device *types.Device) error {
+func (logic *Logic) UnountVolume(volumeID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
