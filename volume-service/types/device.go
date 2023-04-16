@@ -16,7 +16,6 @@ type Device struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
 	IP          string    `json:"ip"`
 	Password    string    `json:"password"`
-	VolumeSize  int64     `json:"volume_size"` // in bytes
 	Description string    `json:"description,omitempty"`
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`

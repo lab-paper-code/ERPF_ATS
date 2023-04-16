@@ -7,7 +7,6 @@ import (
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -53,7 +52,7 @@ func Start(config *commons.Config) (*DBAdapter, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(types.Device{})
+	err = db.AutoMigrate(types.Device{}, types.Volume{})
 	if err != nil {
 		return nil, err
 	}
@@ -68,38 +67,5 @@ func Start(config *commons.Config) (*DBAdapter, error) {
 
 // Stop stops DBAdapter
 func (adapter *DBAdapter) Stop() error {
-	return nil
-}
-
-func (adapter *DBAdapter) ListDevices() ([]types.Device, error) {
-	devices := []types.Device{}
-	result := adapter.db.Find(&devices)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return devices, nil
-}
-
-func (adapter *DBAdapter) GetDevice(id string) (*types.Device, error) {
-	var device types.Device
-	result := adapter.db.First(&device, id)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return &device, nil
-}
-
-func (adapter *DBAdapter) InsertDevice(device *types.Device) error {
-	result := adapter.db.Create([]*types.Device{device})
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected != 1 {
-		return xerrors.Errorf("failed to insert a device")
-	}
-
 	return nil
 }
