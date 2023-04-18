@@ -14,8 +14,10 @@
 *.out
 .vscode
 
+# Output and input files (Strace log analysis)
 io_tracing/strace_outputs/
 io_tracing/images/
+opened_files/
 
 **/__pycache__/
 **/bin/
