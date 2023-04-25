@@ -17,7 +17,7 @@
 # Output and input files (Strace log analysis)
 io_tracing/strace_outputs/
 io_tracing/images/
-opened_files/
+io_tracing/io_tracing_venv/
 
 **/__pycache__/
 **/bin/
