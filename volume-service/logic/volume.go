@@ -175,14 +175,14 @@ func (logic *Logic) MountVolume(volumeID string) error {
 	return nil
 }
 
-func (logic *Logic) UnountVolume(volumeID string) error {
+func (logic *Logic) UnmountVolume(volumeID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
-		"function": "UnountVolume",
+		"function": "UnmountVolume",
 	})
 
-	logger.Debug("received UnountVolume()")
+	logger.Debug("received UnmountVolume()")
 
 	// TODO: Implement this
 

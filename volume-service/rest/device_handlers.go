@@ -15,6 +15,8 @@ func (adapter *RESTAdapter) setupDeviceRouter() {
 	// any devices can call these APIs
 	adapter.router.GET("/devices", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListDevices)
 	adapter.router.GET("/devices/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetDevice)
+	adapter.router.GET("/devices/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetDevice)
+	adapter.router.PATCH("/devices/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUpdateDevice)
 
 	// any devices can call these APIs
 	adapter.router.POST("/devices", gin.BasicAuth(adapter.getAdminUserAccounts()), adapter.handleRegisterDevice)
@@ -47,7 +49,13 @@ func (adapter *RESTAdapter) handleListDevices(c *gin.Context) {
 			return
 		}
 
-		output.Devices = devices
+		redactedDevices := make([]types.Device, len(devices))
+		for deviceIdx, device := range devices {
+			redactedDevice := device.GetRedacted()
+			redactedDevices[deviceIdx] = redactedDevice
+		}
+
+		output.Devices = redactedDevices
 	} else {
 		// device - returns mine
 		device, err := adapter.logic.GetDevice(user)
@@ -58,7 +66,7 @@ func (adapter *RESTAdapter) handleListDevices(c *gin.Context) {
 			return
 		}
 
-		output.Devices = []types.Device{device}
+		output.Devices = []types.Device{device.GetRedacted()}
 	}
 
 	// success
@@ -78,7 +86,7 @@ func (adapter *RESTAdapter) handleGetDevice(c *gin.Context) {
 	deviceID := c.Param("id")
 
 	if !adapter.isAdminUser(user) && deviceID != user {
-		// requestiong other's device info
+		// requesting other's device info
 		err := xerrors.Errorf("failed to get device %s, you cannot access other device info", deviceID)
 		logger.Error(err)
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
@@ -94,7 +102,7 @@ func (adapter *RESTAdapter) handleGetDevice(c *gin.Context) {
 	}
 
 	// success
-	c.JSON(http.StatusOK, device)
+	c.JSON(http.StatusOK, device.GetRedacted())
 }
 
 func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
@@ -147,6 +155,74 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 	logger.Debugf("ID: %s\tIP: %s", device.ID, device.IP)
 
 	err = adapter.logic.InsertDevice(&device)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, device.GetRedacted())
+}
+
+func (adapter *RESTAdapter) handleUpdateDevice(c *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"package":  "rest",
+		"struct":   "RESTAdapter",
+		"function": "handleUpdateDevice",
+	})
+
+	logger.Infof("access request to %s", c.Request.URL)
+
+	user := c.GetString(gin.AuthUserKey)
+	deviceID := c.Param("id")
+
+	if !adapter.isAdminUser(user) && deviceID != user {
+		// requesting other's device info
+		err := xerrors.Errorf("failed to update device %s, you cannot access other device info", deviceID)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	type deviceUpdateRequest struct {
+		IP       string `json:"ip,omitempty"`
+		Password string `json:"password,omitempty"`
+	}
+
+	var input deviceUpdateRequest
+
+	err := c.BindJSON(&input)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(input.IP) > 0 {
+		// update IP
+		err = adapter.logic.UpdateDeviceIP(deviceID, input.IP)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	if len(input.Password) > 0 {
+		// update password
+		err = adapter.logic.UpdateDevicePassword(deviceID, input.Password)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	device, err := adapter.logic.GetDevice(deviceID)
 	if err != nil {
 		// fail
 		logger.Error(err)

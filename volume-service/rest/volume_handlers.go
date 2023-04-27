@@ -20,6 +20,8 @@ func (adapter *RESTAdapter) setupVolumeRouter() {
 	adapter.router.GET("/volumes/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetVolume)
 	adapter.router.POST("/volumes", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleCreateVolume)
 	adapter.router.PATCH("/volumes/:id/resize", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleResizeVolume)
+	adapter.router.PATCH("/volumes/:id/mount", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleMountVolume)
+	adapter.router.PATCH("/volumes/:id/unmount", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUnmountVolume)
 }
 
 func (adapter *RESTAdapter) handleListVolumes(c *gin.Context) {
@@ -223,6 +225,116 @@ func (adapter *RESTAdapter) handleResizeVolume(c *gin.Context) {
 	}
 
 	err = adapter.logic.ResizeVolume(volumeID, volumeSizeNum)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, volume)
+}
+
+func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"package":  "rest",
+		"struct":   "RESTAdapter",
+		"function": "handleMountVolume",
+	})
+
+	logger.Infof("access request to %s", c.Request.URL)
+
+	user := c.GetString(gin.AuthUserKey)
+	volumeID := c.Param("id")
+
+	type volumeUnmountRequest struct {
+		// define input required
+	}
+
+	var input volumeUnmountRequest
+
+	err := c.BindJSON(&input)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	volume, err := adapter.logic.GetVolume(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !adapter.isAdminUser(user) && volume.DeviceID != user {
+		// requestiong other's volume info
+		err := xerrors.Errorf("failed to get volume %s, you cannot access other devices' volume info", volumeID)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Debugf("Mount Volume ID: %s", volumeID)
+
+	err = adapter.logic.MountVolume(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, volume)
+}
+
+func (adapter *RESTAdapter) handleUnmountVolume(c *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"package":  "rest",
+		"struct":   "RESTAdapter",
+		"function": "handleUnmountVolume",
+	})
+
+	logger.Infof("access request to %s", c.Request.URL)
+
+	user := c.GetString(gin.AuthUserKey)
+	volumeID := c.Param("id")
+
+	type volumeUnmountRequest struct {
+		// define input required
+	}
+
+	var input volumeUnmountRequest
+
+	err := c.BindJSON(&input)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	volume, err := adapter.logic.GetVolume(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !adapter.isAdminUser(user) && volume.DeviceID != user {
+		// requestiong other's volume info
+		err := xerrors.Errorf("failed to get volume %s, you cannot access other devices' volume info", volumeID)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Debugf("Unmount Volume ID: %s", volumeID)
+
+	err = adapter.logic.UnmountVolume(volumeID)
 	if err != nil {
 		// fail
 		logger.Error(err)
