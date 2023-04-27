@@ -6,7 +6,8 @@ Run the service
 ./bin/volume-service -c config.yaml
 ```
 
-```startuml
+## Object Diagram
+<!--
 @startuml object
 object device1 {
     ID = "dev_1"
@@ -31,4 +32,6 @@ device1 --o volume1
 device1 --o volume2
 
 @enduml
-```
+-->
+
+![object diagram](object_diagram.svg)
