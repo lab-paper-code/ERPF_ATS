@@ -154,7 +154,7 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 
 	logger.Debugf("ID: %s\tIP: %s", device.ID, device.IP)
 
-	err = adapter.logic.InsertDevice(&device)
+	err = adapter.logic.CreateDevice(&device)
 	if err != nil {
 		// fail
 		logger.Error(err)

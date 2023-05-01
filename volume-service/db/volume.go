@@ -61,3 +61,17 @@ func (adapter *DBAdapter) UpdateVolumeSize(volumeID string, size int64) error {
 
 	return nil
 }
+
+func (adapter *DBAdapter) UpdateVolumeMount(volumeID string, mounted bool) error {
+	var record types.Volume
+	result := adapter.db.Where("id = ?", volumeID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.Mounted = mounted
+
+	adapter.db.Save(&record)
+
+	return nil
+}
