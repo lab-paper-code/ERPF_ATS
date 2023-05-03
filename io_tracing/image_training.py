@@ -55,8 +55,7 @@ dataset_with_path = tf.data.Dataset.zip((dataset, file_paths))
 
 # Fine-tune the model
 for i in range(epochs):
-   if shuffle:
-      dataset_with_path = dataset_with_path.shuffle(10000)
+   dataset_with_path = dataset_with_path.shuffle(10000)
    print('Epoch ' + str(i+1) + '/' + str(epochs))
    image_dataset = dataset_with_path.map(lambda img, path: img).prefetch(tf.data.AUTOTUNE)
    path_dataset = tf.data.Dataset.from_tensor_slices(dataset.file_paths).batch(batch_size)
