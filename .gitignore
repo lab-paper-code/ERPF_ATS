@@ -14,10 +14,12 @@
 *.out
 .vscode
 
-# Output and input files (Strace log analysis)
-io_tracing/strace_outputs/
-io_tracing/images/*/
-io_tracing/io_tracing_venv/
+# == I/O Optimization ==
+# Input and Output files
+io_optimization/images/
+io_optimization/*_outputs/
+# Venv
+io_optimization/env/
 
 
 **/__pycache__/
