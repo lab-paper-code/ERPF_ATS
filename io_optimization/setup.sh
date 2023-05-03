@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 dataset_path=$1
 
 mkdir images
@@ -13,6 +13,6 @@ cd ..
 
 # venv 설정 및 requirements 설치
 python3.8 -m venv env
-source env/bin/activate
+. env/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
