@@ -1,31 +1,18 @@
 #!/bin/sh
 dataset_path=$1
 
-# Download ImageNet Dataset
-wget $dataset_path
-
-mv ./ILSVRC2012_img_val.tar ./images
+mkdir images
 cd images
-
-# Unzip
+wget $dataset_path
 tar -xvf ILSVRC2012_img_val.tar
 rm ILSVRC2012_img_val.tar
 
 # 이미지를 카테고리 별로 분류
-sh image_categorize.sh
-
-# 카테고리 별 이미지 파일을 10개씩만 남김 (총 10,000장이 되게끔)
-for dir in */
-do
-  cd "$dir"
-  jpeg_files=$(ls *.JPEG 2>/dev/null)
-
-  if [ $(echo "$jpeg_files" | wc -l) -gt 10 ]
-  then
-    excess=$(echo "$jpeg_files" | head -n -10)
-    rm $excess
-  fi
-  cd ..
-done
-
+sh ../image_categorize.sh
 cd ..
+
+# venv 설정 및 requirements 설치
+python3.8 -m venv env
+source env/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
