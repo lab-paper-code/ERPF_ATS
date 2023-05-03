@@ -13,6 +13,7 @@ func (adapter *RESTAdapter) setupRouter() {
 
 	adapter.setupDeviceRouter()
 	adapter.setupVolumeRouter()
+	adapter.setupAppRouter()
 }
 
 func (adapter *RESTAdapter) handlePing(c *gin.Context) {

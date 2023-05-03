@@ -52,7 +52,7 @@ func Start(config *commons.Config) (*DBAdapter, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(types.Device{}, types.Volume{})
+	err = db.AutoMigrate(types.Device{}, types.Volume{}, types.App{}, types.AppRun{})
 	if err != nil {
 		return nil, err
 	}

@@ -16,6 +16,7 @@ type Volume struct {
 	ID         string    `json:"id" gorm:"primaryKey"`
 	DeviceID   string    `json:"device_id"`
 	VolumeSize int64     `json:"volume_size"` // in bytes
+	Mounted    bool      `json:"mounted"`
 	CreatedAt  time.Time `json:"created_at,omitempty"`
 	UpdatedAt  time.Time `json:"updated_at,omitempty"`
 }

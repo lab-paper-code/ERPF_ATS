@@ -3,14 +3,13 @@ package logic
 import (
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 )
 
 func (logic *Logic) ListVolumes(deviceID string) ([]types.Volume, error) {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
-		"function": "ListDevices",
+		"function": "ListVolumes",
 	})
 
 	logger.Debug("received ListVolumes()")
@@ -42,14 +41,14 @@ func (logic *Logic) GetVolume(volumeID string) (types.Volume, error) {
 	return logic.dbAdapter.GetVolume(volumeID)
 }
 
-func (logic *Logic) InsertVolume(volume *types.Volume) error {
+func (logic *Logic) CreateVolume(volume *types.Volume) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
-		"function": "InsertVolume",
+		"function": "CreateVolume",
 	})
 
-	logger.Debug("received InsertVolume()")
+	logger.Debug("received CreateVolume()")
 
 	return logic.dbAdapter.InsertVolume(volume)
 }
@@ -172,7 +171,8 @@ func (logic *Logic) MountVolume(volumeID string) error {
 			Device: device,
 		}
 	*/
-	return nil
+
+	return logic.dbAdapter.UpdateVolumeMount(volumeID, true)
 }
 
 func (logic *Logic) UnmountVolume(volumeID string) error {
@@ -186,5 +186,5 @@ func (logic *Logic) UnmountVolume(volumeID string) error {
 
 	// TODO: Implement this
 
-	return xerrors.Errorf("not implemented")
+	return logic.dbAdapter.UpdateVolumeMount(volumeID, false)
 }

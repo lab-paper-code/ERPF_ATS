@@ -52,7 +52,6 @@ func (adapter *RESTAdapter) handleListVolumes(c *gin.Context) {
 		}
 
 		output.Volumes = volumes
-
 	} else {
 		// device - returns mine
 		volumes, err := adapter.logic.ListVolumes(user)
@@ -155,7 +154,7 @@ func (adapter *RESTAdapter) handleCreateVolume(c *gin.Context) {
 
 	logger.Debugf("ID: %s\tVolumeSize: %d", volume.ID, volumeSizeNum)
 
-	err = adapter.logic.InsertVolume(&volume)
+	err = adapter.logic.CreateVolume(&volume)
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -247,11 +246,11 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 	volumeID := c.Param("id")
 
-	type volumeUnmountRequest struct {
+	type volumeMountRequest struct {
 		// define input required
 	}
 
-	var input volumeUnmountRequest
+	var input volumeMountRequest
 
 	err := c.BindJSON(&input)
 	if err != nil {
@@ -277,7 +276,7 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf("Mount Volume ID: %s", volumeID)
+	logger.Debugf("Mounting Volume ID: %s", volumeID)
 
 	err = adapter.logic.MountVolume(volumeID)
 	if err != nil {
@@ -332,7 +331,7 @@ func (adapter *RESTAdapter) handleUnmountVolume(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf("Unmount Volume ID: %s", volumeID)
+	logger.Debugf("Unmounting Volume ID: %s", volumeID)
 
 	err = adapter.logic.UnmountVolume(volumeID)
 	if err != nil {

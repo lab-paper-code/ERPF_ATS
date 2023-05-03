@@ -51,14 +51,14 @@ func (logic *Logic) GetDevice(deviceID string) (types.Device, error) {
 	return logic.dbAdapter.GetDevice(deviceID)
 }
 
-func (logic *Logic) InsertDevice(device *types.Device) error {
+func (logic *Logic) CreateDevice(device *types.Device) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
-		"function": "InsertDevice",
+		"function": "CreateDevice",
 	})
 
-	logger.Debug("received InsertDevice()")
+	logger.Debug("received CreateDevice()")
 
 	return logic.dbAdapter.InsertDevice(device)
 }
