@@ -6,7 +6,6 @@
 *.dylib
 .DS_Store
 *.pyc
-*.db
 
 # Test binary, built with `go test -c`
 *.test
@@ -19,6 +18,8 @@
 # Input and Output files
 io_optimization/images/
 io_optimization/*_outputs/
+io_optimization/profiles/
+io_optimization/checkpoints/
 # Venv
 io_optimization/env/
 
