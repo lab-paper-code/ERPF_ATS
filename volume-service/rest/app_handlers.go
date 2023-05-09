@@ -85,11 +85,11 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 
 	type appCreationRequest struct {
-		Name        string                 `json:"name"`
-		RequireGPU  bool                   `json:"require_gpu,omitempty"`
-		Description string                 `json:"description,omitempty"`
-		DockerImage string                 `json:"docker_image"`
-		Parameters  map[string]interface{} `json:"parameters,omitempty"`
+		Name        string `json:"name"`
+		RequireGPU  bool   `json:"require_gpu,omitempty"`
+		Description string `json:"description,omitempty"`
+		DockerImage string `json:"docker_image"`
+		//Parameters  map[string]interface{} `json:"parameters,omitempty"`js: commented(&map not supported error)
 	}
 
 	var input appCreationRequest
@@ -115,7 +115,7 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 		RequireGPU:  input.RequireGPU,
 		Description: input.Description,
 		DockerImage: input.Description,
-		Parameters:  input.Parameters,
+		//	Parameters:  input.Parameters, js: commented
 	}
 
 	err = adapter.logic.CreateApp(&app)

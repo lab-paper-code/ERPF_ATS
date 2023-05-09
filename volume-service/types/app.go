@@ -14,14 +14,14 @@ const (
 
 // App represents an app, holding all necessary info. about app
 type App struct {
-	ID          string                 `json:"id" gorm:"primaryKey"`
-	Name        string                 `json:"name"`
-	RequireGPU  bool                   `json:"require_gpu,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	DockerImage string                 `json:"docker_image"`
-	Parameters  map[string]interface{} `json:"parameters,omitempty"`
-	CreatedAt   time.Time              `json:"created_at,omitempty"`
-	UpdatedAt   time.Time              `json:"updated_at,omitempty"`
+	ID          string `json:"id" gorm:"primaryKey"`
+	Name        string `json:"name"`
+	RequireGPU  bool   `json:"require_gpu,omitempty"`
+	Description string `json:"description,omitempty"`
+	DockerImage string `json:"docker_image"`
+	// Parameters  map[string]interface{} `json:"parameters,omitempty"` js: commented out(error: unsupported data type: &map[])
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
 // NewAppID creates a new App ID
