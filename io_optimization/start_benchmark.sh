@@ -1,10 +1,13 @@
 #!/bin/sh
 
-n=100
+n=5
 ssd_path=$1
 hdd_path=$2
 batch_size=${3:-32}
-epochs=${4:-10}
+epochs=${4:-5}
+
+ssd_checkpoint="./checkpoints"
+hdd_checkpoint="/hdd/checkpoints"
 
 . ./env/bin/activate
 
@@ -22,7 +25,7 @@ echo "========================================="
 sdd_execution_time=0
 for i in $(seq 1 $n); do
     start=$(date +%s.%N)
-    python3.8 target_scripts/image_fine-tuning.py $ssd_path $dataset_size $batch_size $epochs > /dev/null
+    python3.8 target_scripts/image_fine-tuning.py --dataset_path=$ssd_path --batch_size=$batch_size --epochs=$epochs --checkpoint_path=$ssd_checkpoint 1> fine-tuning_log_ssd 2> error_log_ssd
     end=$(date +%s.%N)
     runtime=$(echo "$end - $start" | bc)
     sdd_execution_time=$(echo "$sdd_execution_time + $runtime" | bc)
@@ -31,14 +34,14 @@ sdd_execution_time_avg=$(echo "$sdd_execution_time / $n" | bc)
 echo "Average execution time (SSD): $sdd_execution_time"
 
 hdd_execution_time=0
-hdparm -A0 /dev/sda
+sudo hdparm -W 0 /dev/sda
 for i in $(seq 1 $n); do
     start=$(date +%s.%N)
-    python3.8 target_scripts/image_fine-tuning.py $hdd_path $dataset_size $batch_size $epochs  > /dev/null
+    python3.8 target_scripts/image_fine-tuning.py --dataset_path=$hdd_path --batch_size=$batch_size --epochs=$epochs --checkpoint_path=$hdd_checkpoint 1> fine-tuning_log_hdd 2> error_log_hdd
     end=$(date +%s.%N)
     runtime=$(echo "$end - $start" | bc)
     hdd_execution_time=$(echo "$hdd_execution_time + $runtime" | bc)
 done
-hdparm -A1 /dev/sda
+sudo hdparm -W 1 /dev/sda
 hdd_execution_time_avg=$(echo "$hdd_execution_time / $n" | bc)
 echo "Average execution time (HDD): $hdd_execution_time"
