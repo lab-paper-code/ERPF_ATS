@@ -15,7 +15,6 @@ func (adapter *RESTAdapter) setupDeviceRouter() {
 	// any devices can call these APIs
 	adapter.router.GET("/devices", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListDevices)
 	adapter.router.GET("/devices/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetDevice)
-	/* js: deleted identical lines(same as above line, caused panic) */
 	adapter.router.PATCH("/devices/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUpdateDevice)
 
 	// any devices can call these APIs
