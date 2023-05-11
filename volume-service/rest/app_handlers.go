@@ -15,10 +15,11 @@ func (adapter *RESTAdapter) setupAppRouter() {
 	adapter.router.GET("/apps", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListApps)
 	adapter.router.GET("/apps/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetApp)
 	adapter.router.POST("/apps", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleCreateApp)
-	adapter.router.PATCH("/apps/:id/execute", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleExecuteApp)
+
 	adapter.router.GET("/appruns", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListAppRuns)
+	adapter.router.POST("/appruns/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleExecuteApp)
 	adapter.router.GET("/appruns/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetAppRun)
-	adapter.router.PATCH("/appruns/:id/terminate", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleTerminateAppRun)
+	adapter.router.DELETE("/appruns/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleTerminateAppRun)
 }
 
 func (adapter *RESTAdapter) handleListApps(c *gin.Context) {

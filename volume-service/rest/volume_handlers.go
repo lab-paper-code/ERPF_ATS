@@ -19,9 +19,10 @@ func (adapter *RESTAdapter) setupVolumeRouter() {
 	adapter.router.GET("/volumes", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListVolumes)
 	adapter.router.GET("/volumes/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetVolume)
 	adapter.router.POST("/volumes", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleCreateVolume)
-	adapter.router.PATCH("/volumes/:id/resize", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleResizeVolume)
-	adapter.router.PATCH("/volumes/:id/mount", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleMountVolume)
-	adapter.router.PATCH("/volumes/:id/unmount", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUnmountVolume)
+	adapter.router.PATCH("/volumes/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUpdateVolume)
+
+	adapter.router.POST("/mounts/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleMountVolume)
+	adapter.router.DELETE("/mounts/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUnmountVolume)
 }
 
 func (adapter *RESTAdapter) handleListVolumes(c *gin.Context) {
@@ -165,11 +166,11 @@ func (adapter *RESTAdapter) handleCreateVolume(c *gin.Context) {
 	c.JSON(http.StatusOK, volume)
 }
 
-func (adapter *RESTAdapter) handleResizeVolume(c *gin.Context) {
+func (adapter *RESTAdapter) handleUpdateVolume(c *gin.Context) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
 		"struct":   "RESTAdapter",
-		"function": "handleResizeVolume",
+		"function": "handleUpdateVolume",
 	})
 
 	logger.Infof("access request to %s", c.Request.URL)
@@ -177,11 +178,11 @@ func (adapter *RESTAdapter) handleResizeVolume(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 	volumeID := c.Param("id")
 
-	type volumeResizeRequest struct {
+	type volumeUpdateRequest struct {
 		VolumeSize string `json:"volume_size,omitempty"`
 	}
 
-	var input volumeResizeRequest
+	var input volumeUpdateRequest
 
 	err := c.BindJSON(&input)
 	if err != nil {
@@ -191,6 +192,15 @@ func (adapter *RESTAdapter) handleResizeVolume(c *gin.Context) {
 		return
 	}
 
+	if len(input.VolumeSize) == 0 {
+		// no change
+		err := xerrors.Errorf("failed to update volume %s, no change", volumeID)
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// resize
 	volumeSizeNum := types.SizeStringToNum(input.VolumeSize)
 	if volumeSizeNum < volumeSizeMinimum {
 		logger.Debugf("you cannot give volume size lesser than %d, set to %d", volumeSizeMinimum, volumeSizeMinimum)
