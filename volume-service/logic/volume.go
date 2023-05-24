@@ -94,37 +94,13 @@ func (logic *Logic) MountVolume(volumeID string) error {
 		return err
 	}
 
-	logger.Debugf("creating Webdav Deployment for device %s, volume %s", device.ID, volume.ID)
-	err = logic.k8sAdapter.CreateWebdavDeployment(&device, &volume)
+	logger.Debugf("creating Webdav for device %s, volume %s", device.ID, volume.ID)
+	err = logic.k8sAdapter.CreateWebdav(&device, &volume)
 	if err != nil {
 		return err
 	}
 
 	/*
-		//make App deploy
-		err = k8sClient.CreateAppDeploy(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make webdav service
-		err = k8sClient.CreateWebdavSVC(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make App service
-		err = k8sClient.CreateAppSVC(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make Webdav ingress
-		err = k8sClient.CreateWebdavIngress(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
 		//make App ingress
 		err = k8sClient.CreateAppIngress(input.Username, volumeID)
 		if err != nil {
@@ -188,14 +164,13 @@ func (logic *Logic) UnmountVolume(volumeID string) error {
 
 	logger.Debug("received UnmountVolume()")
 
-	// TODO: Implement this
 	volume, err := logic.dbAdapter.GetVolume(volumeID)
 	if err != nil {
 		return err
 	}
 
-	logger.Debugf("stopping Webdav Deployment for device %s, volume %s", volume.DeviceID, volume.ID)
-	err = logic.k8sAdapter.DeleteWebdavDeployment(&volume)
+	logger.Debugf("stopping Webdav for device %s, volume %s", volume.DeviceID, volume.ID)
+	err = logic.k8sAdapter.DeleteWebdav(volumeID)
 	if err != nil {
 		return err
 	}
