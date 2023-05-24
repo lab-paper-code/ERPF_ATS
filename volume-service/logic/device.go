@@ -60,6 +60,11 @@ func (logic *Logic) CreateDevice(device *types.Device) error {
 
 	logger.Debug("received CreateDevice()")
 
+	err := logic.k8sAdapter.CreateSecret(device)
+	if err != nil {
+		return err
+	}
+
 	return logic.dbAdapter.InsertDevice(device)
 }
 
