@@ -15,23 +15,38 @@ import (
 const (
 	webdavDeploymentNamePrefix string = "webdav"
 	webdavDeploymentNamespace  string = objectNamespace
+	webdavServiceNamePrefix    string = "webdav"
+	webdavServiceNamespace     string = objectNamespace
 
 	webdavContainerVolumeName  string = "webdav-storage"
 	webdavContainerPVMountPath string = "/uploads"
 )
 
-func (adapter *K8SAdapter) GetWebdavDeploymentName(device *types.Device) string {
-	return fmt.Sprintf("%s_%s", webdavDeploymentNamePrefix, device.ID)
+func (adapter *K8SAdapter) GetWebdavDeploymentName(volumdID string) string {
+	return fmt.Sprintf("%s_%s", webdavDeploymentNamePrefix, volumdID)
 }
 
-func (adapter *K8SAdapter) GetWebdavDeploymentLabels(device *types.Device) map[string]string {
+func (adapter *K8SAdapter) GetWebdavServiceName(volumdID string) string {
+	return fmt.Sprintf("%s_%s", webdavServiceNamePrefix, volumdID)
+}
+
+func (adapter *K8SAdapter) getWebdavDeploymentLabels(volume *types.Volume) map[string]string {
 	labels := map[string]string{}
-	labels["webdav-name"] = adapter.GetWebdavDeploymentName(device)
-	labels["device-id"] = device.ID
+	labels["webdav-name"] = adapter.GetWebdavDeploymentName(volume.ID)
+	labels["volume-id"] = volume.ID
+	labels["device-id"] = volume.DeviceID
 	return labels
 }
 
-func (adapter *K8SAdapter) getWebdavContainers(device *types.Device) []apiv1.Container {
+func (adapter *K8SAdapter) getWebdavServiceLabels(volume *types.Volume) map[string]string {
+	labels := map[string]string{}
+	labels["webdav-name"] = adapter.GetWebdavServiceName(volume.ID)
+	labels["volume-id"] = volume.ID
+	labels["device-id"] = volume.DeviceID
+	return labels
+}
+
+func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *types.Volume) []apiv1.Container {
 	return []apiv1.Container{
 		{
 			Name:  "webdav",
@@ -91,8 +106,8 @@ func (adapter *K8SAdapter) getWebdavContainers(device *types.Device) []apiv1.Con
 	}
 }
 
-func (adapter *K8SAdapter) getWebdavContainerVolumes(device *types.Device) []apiv1.Volume {
-	pvcName := adapter.GetVolumeClaimName(device)
+func (adapter *K8SAdapter) getWebdavContainerVolumes(volume *types.Volume) []apiv1.Volume {
+	pvcName := adapter.GetVolumeClaimName(volume.ID)
 
 	containerVolumes := []apiv1.Volume{
 		{
@@ -108,21 +123,21 @@ func (adapter *K8SAdapter) getWebdavContainerVolumes(device *types.Device) []api
 	return containerVolumes
 }
 
-func (adapter *K8SAdapter) CreateWebdavDeployment(device *types.Device) error {
+func (adapter *K8SAdapter) createWebdavDeployment(device *types.Device, volume *types.Volume) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
 		"struct":   "K8SAdapter",
-		"function": "CreateWebdavDeployment",
+		"function": "createWebdavDeployment",
 	})
 
-	logger.Debug("received CreateWebdavDeployment()")
+	logger.Debug("received createWebdavDeployment()")
 
-	webdavDeploymentName := adapter.GetWebdavDeploymentName(device)
-	webdavDeploymentLabels := adapter.GetWebdavDeploymentLabels(device)
+	webdavDeploymentName := adapter.GetWebdavDeploymentName(volume.ID)
+	webdavDeploymentLabels := adapter.getWebdavDeploymentLabels(volume)
 	webdavDeploymentNumReplicas := int32(1)
 
-	webdavContainers := adapter.getWebdavContainers(device)
-	webdavContainerVolumes := adapter.getWebdavContainerVolumes(device)
+	webdavContainers := adapter.getWebdavContainers(device, volume)
+	webdavContainerVolumes := adapter.getWebdavContainerVolumes(volume)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -170,5 +185,157 @@ func (adapter *K8SAdapter) CreateWebdavDeployment(device *types.Device) error {
 		}
 	}
 
+	return nil
+}
+
+func (adapter *K8SAdapter) deleteWebdavDeployment(volumeID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "deleteWebdavDeployment",
+	})
+
+	logger.Debug("received deleteWebdavDeployment()")
+
+	webdavDeploymentName := adapter.GetWebdavDeploymentName(volumeID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	deploymentclient := adapter.clientSet.AppsV1().Deployments(webdavDeploymentNamespace)
+	err := deploymentclient.Delete(ctx, webdavDeploymentName, *metav1.NewDeleteOptions(0))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) createWebdavService(volume *types.Volume) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "createWebdavService",
+	})
+
+	logger.Debug("received createWebdavService()")
+
+	webdavServiceName := adapter.GetWebdavServiceName(volume.ID)
+	webdavServiceLabels := adapter.getWebdavServiceLabels(volume)
+
+	service := &apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      webdavServiceName,
+			Labels:    webdavServiceLabels,
+			Namespace: webdavServiceNamespace,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Port:     int32(80),
+					Protocol: apiv1.ProtocolTCP,
+				},
+			},
+			Selector: map[string]string{
+				"app": adapter.GetWebdavDeploymentName(volume.ID),
+			},
+			Type: apiv1.ServiceTypeClusterIP,
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	serviceClient := adapter.clientSet.CoreV1().Services(webdavServiceNamespace)
+	_, err := serviceClient.Get(ctx, service.GetName(), metav1.GetOptions{})
+	if err != nil {
+		// does not exist
+		_, createErr := serviceClient.Create(ctx, service, metav1.CreateOptions{})
+		if createErr != nil {
+			return createErr
+		}
+	} else {
+		// exist -> update
+		_, updateErr := serviceClient.Update(ctx, service, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) deleteWebdavService(volumeID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "deleteWebdavService",
+	})
+
+	logger.Debug("received deleteWebdavService()")
+
+	webdavServiceName := adapter.GetWebdavServiceName(volumeID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	serviceClient := adapter.clientSet.CoreV1().Services(webdavServiceNamespace)
+	err := serviceClient.Delete(ctx, webdavServiceName, *metav1.NewDeleteOptions(0))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) CreateWebdav(device *types.Device, volume *types.Volume) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "CreateWebdav",
+	})
+
+	logger.Debug("received CreateWebdav()")
+
+	err := adapter.createWebdavDeployment(device, volume)
+	if err != nil {
+		return err
+	}
+
+	err = adapter.createWebdavService(volume)
+	if err != nil {
+		return err
+	}
+
+	/*
+		//make Webdav ingress
+		err = k8sClient.createWebdavIngress(input.Username, volumeID)
+		if err != nil {
+			panic(err)
+		}
+	*/
+	return nil
+}
+
+func (adapter *K8SAdapter) DeleteWebdav(volumeID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "DeleteWebdav",
+	})
+
+	logger.Debug("received DeleteWebdav()")
+
+	//TODO: Add deleteWebdavIngress
+
+	err := adapter.deleteWebdavService(volumeID)
+	if err != nil {
+		return err
+	}
+
+	err = adapter.deleteWebdavDeployment(volumeID)
+	if err != nil {
+		return err
+	}
 	return nil
 }

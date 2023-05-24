@@ -21,34 +21,33 @@ func (adapter *K8SAdapter) GetStorageClassName() string {
 	return storageClassName
 }
 
-func (adapter *K8SAdapter) GetVolumeClaimName(device *types.Device) string {
-	return fmt.Sprintf("%s_%s", volumeClaimNamePrefix, device.ID)
+func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string {
+	return fmt.Sprintf("%s_%s", volumeClaimNamePrefix, volumeID)
 }
 
-func (adapter *K8SAdapter) getVolumeLabels(device *types.Device) map[string]string {
+func (adapter *K8SAdapter) getVolumeLabels(volume *types.Volume) map[string]string {
 	labels := map[string]string{}
-	labels["device-id"] = device.ID
+	labels["volume-id"] = volume.ID
+	labels["device-id"] = volume.DeviceID
 	return labels
 }
 
-func (adapter *K8SAdapter) CreatePVC(device *types.Device) error {
+func (adapter *K8SAdapter) CreateVolume(volume *types.Volume) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
 		"struct":   "K8SAdapter",
-		"function": "CreatePVC",
+		"function": "CreateVolume",
 	})
 
-	logger.Debug("received CreatePVC()")
+	logger.Debug("received CreateVolume()")
 
-	volumeClaimName := adapter.GetVolumeClaimName(device)
-	volumeLabels := adapter.getVolumeLabels(device)
+	volumeClaimName := adapter.GetVolumeClaimName(volume.ID)
+	volumeLabels := adapter.getVolumeLabels(volume)
 
-	// we request very small size volume to match any pv available
-	// TODO: double check if this pvc can bind to pv
 	volumeSize := resourcev1.Quantity{
 		Format: resourcev1.BinarySI,
 	}
-	volumeSize.Set(1024)
+	volumeSize.Set(volume.VolumeSize)
 
 	storageClassName := adapter.GetStorageClassName()
 
@@ -88,6 +87,37 @@ func (adapter *K8SAdapter) CreatePVC(device *types.Device) error {
 		if updateErr != nil {
 			return updateErr
 		}
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) ResizeVolume(volumeID string, size int64) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "ResizeVolume",
+	})
+
+	logger.Debug("received ResizeVolume()")
+
+	volumeClaimName := adapter.GetVolumeClaimName(volumeID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	pvcclient := adapter.clientSet.CoreV1().PersistentVolumeClaims(volumeNamespace)
+	pvc, err := pvcclient.Get(ctx, volumeClaimName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// TODO: double check if this works
+	pvc.Spec.Resources.Requests.Storage().Set(size)
+
+	_, updateErr := pvcclient.Update(ctx, pvc, metav1.UpdateOptions{})
+	if updateErr != nil {
+		return updateErr
 	}
 
 	return nil

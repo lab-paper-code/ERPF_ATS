@@ -50,6 +50,11 @@ func (logic *Logic) CreateVolume(volume *types.Volume) error {
 
 	logger.Debug("received CreateVolume()")
 
+	err := logic.k8sAdapter.CreateVolume(volume)
+	if err != nil {
+		return err
+	}
+
 	return logic.dbAdapter.InsertVolume(volume)
 }
 
@@ -61,6 +66,11 @@ func (logic *Logic) ResizeVolume(volumeID string, size int64) error {
 	})
 
 	logger.Debug("received ResizeVolume()")
+
+	err := logic.k8sAdapter.ResizeVolume(volumeID, size)
+	if err != nil {
+		return err
+	}
 
 	return logic.dbAdapter.UpdateVolumeSize(volumeID, size)
 }
@@ -74,53 +84,23 @@ func (logic *Logic) MountVolume(volumeID string) error {
 
 	logger.Debug("received MountVolume()")
 
-	//logger.Debug("creating PV for device %s", device.ID)
-	//err := logic.k8sAdapter.CreatePV(device)
-	//if err != nil {
-	//	return err
-	//}
+	volume, err := logic.dbAdapter.GetVolume(volumeID)
+	if err != nil {
+		return err
+	}
+
+	device, err := logic.dbAdapter.GetDevice(volume.DeviceID)
+	if err != nil {
+		return err
+	}
+
+	logger.Debugf("creating Webdav for device %s, volume %s", device.ID, volume.ID)
+	err = logic.k8sAdapter.CreateWebdav(&device, &volume)
+	if err != nil {
+		return err
+	}
 
 	/*
-
-		logger.Debugf("creating PVC for device %s", device.ID)
-		err := logic.k8sAdapter.CreatePVC(device)
-		if err != nil {
-			return err
-		}
-
-		volumeName := logic.k8sAdapter.GetVolumeName(device)
-
-		logger.Debugf("creating Webdav Deployment for device %s, volume %s", device.ID, volumeName)
-		err = logic.k8sAdapter.CreateWebdavDeployment(device)
-		if err != nil {
-			return err
-		}
-	*/
-	/*
-		//make App deploy
-		err = k8sClient.CreateAppDeploy(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make webdav service
-		err = k8sClient.CreateWebdavSVC(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make App service
-		err = k8sClient.CreateAppSVC(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
-		//make Webdav ingress
-		err = k8sClient.CreateWebdavIngress(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-
 		//make App ingress
 		err = k8sClient.CreateAppIngress(input.Username, volumeID)
 		if err != nil {
@@ -184,7 +164,16 @@ func (logic *Logic) UnmountVolume(volumeID string) error {
 
 	logger.Debug("received UnmountVolume()")
 
-	// TODO: Implement this
+	volume, err := logic.dbAdapter.GetVolume(volumeID)
+	if err != nil {
+		return err
+	}
+
+	logger.Debugf("stopping Webdav for device %s, volume %s", volume.DeviceID, volume.ID)
+	err = logic.k8sAdapter.DeleteWebdav(volumeID)
+	if err != nil {
+		return err
+	}
 
 	return logic.dbAdapter.UpdateVolumeMount(volumeID, false)
 }
