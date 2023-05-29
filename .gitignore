@@ -20,6 +20,7 @@ io_optimization/images/
 io_optimization/*_outputs/
 io_optimization/profiles/
 io_optimization/checkpoints/
+io_optimization/benchmarks/
 # Venv
 io_optimization/env/
 
