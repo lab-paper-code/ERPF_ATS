@@ -126,69 +126,6 @@ func (client *K8sClient) getSvcNamespace() string {
 	return nil
 }
 
-// CreatePVC creates a pvc for the given volumeID
-func (client *K8sClient) CreateWebdavSVC(username string, volumeID string) error {
-	logger := log.WithFields(log.Fields{
-		"package":  "k8s",
-		"struct":   "K8sClient",
-		"function": "CreateWebdavSVC",
-	})
-
-	logger.Debugf("Creating a WebdavSVC for user %s, volume id %s", username, volumeID)
-
-	claim := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      client.getWebdavSVCName(volumeID),
-			Namespace: client.getSvcNamespace(),
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Port: int32(80),
-					Protocol: corev1.ProtocolTCP,
-				},
-			},
-			Selector: map[string]string{
-				"app": client.getDeployWebdavName(volumeID),
-			},
-			Type: corev1.ServiceTypeClusterIP,
-		},
-	}
-
-	webdavSVCclient := client.clientSet.CoreV1().Services(client.getVolumeNamespace())
-
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(context.Background(), k8sTimeout)
-	defer cancel()
-
-	_, err := webdavSVCclient.Get(ctx, claim.GetName(), metav1.GetOptions{})
-
-	if err != nil {
-		// failed to get an existing claim
-		_, err = webdavSVCclient.Create(ctx, claim, metav1.CreateOptions{})
-		if err != nil {
-			print(err,"\n")
-			// failed to create one
-			log.Fatal(err)
-			logger.Errorf("Failed to create a WebdavSVC for user %s, volume id %s", username, volumeID)
-			return err
-		}
-
-		logger.Debugf("Created a WebdavSVC for user %s, volume id %s", username, volumeID)
-	} else {
-		_, err = webdavSVCclient.Update(ctx, claim, metav1.UpdateOptions{})
-		if err != nil {
-			// failed to create one
-			logger.Errorf("Failed to update a WebdavSVC for user %s, volume id %s", username, volumeID)
-			return err
-		}
-
-		logger.Debugf("Updated a WebdavSVC for user %s, volume id %s", username, volumeID)
-	}
-
-	return nil
-}
-
 
 // CreatePVC creates a pvc for the given volumeID
 func (client *K8sClient) CreateAppSVC(username string, volumeID string) error {

@@ -87,6 +87,19 @@ func (logic *Logic) ExecuteApp(appRun *types.AppRun) error {
 	logger.Debug("received ExecuteApp()")
 
 	// TODO: Implement this
+	/*
+		//make App deploy
+		err = k8sClient.CreateAppDeploy(input.Username, volumeID)
+		if err != nil {
+			panic(err)
+		}
+
+		//make App service
+		err = k8sClient.CreateAppSVC(input.Username, volumeID)
+		if err != nil {
+			panic(err)
+		}
+	*/
 
 	return logic.dbAdapter.InsertAppRun(appRun)
 }

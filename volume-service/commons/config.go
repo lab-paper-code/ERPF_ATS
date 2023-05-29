@@ -2,7 +2,6 @@ package commons
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
@@ -114,7 +113,7 @@ func LoadConfigFile(configFilePath string) (*Config, error) {
 		logger.Debugf("reading YAML/JSON config file - %s", configFilePath)
 
 		// load from YAML/JSON
-		yjBytes, err := ioutil.ReadFile(configFilePath)
+		yjBytes, err := os.ReadFile(configFilePath)
 		if err != nil {
 			return nil, err
 		}
