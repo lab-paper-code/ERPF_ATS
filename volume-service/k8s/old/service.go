@@ -23,10 +23,6 @@ spec:
   type: Clust
 
 
-// getWebdavSvcName makes webdavSvc name
-func (client *K8sClient) getWebdavSVCName(volumeID string) string {
-	return fmt.Sprintf("%s%s", volumeID, svcWebdavSuffix)
-}
 
 // getAppSvcName makes appSvc name
 func (client *K8sClient) getAppSVCName(volumeID string) string {
