@@ -169,3 +169,54 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 	return nil
 }
 */
+/*
+	//make App ingress
+	err = k8sClient.CreateAppIngress(input.Username, volumeID)
+	if err != nil {
+		panic(err)
+	}
+
+	err = k8sClient.WaitPodRun3(input.Username, volumeID)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Infof("All pods in podname=\"%s\" are running!", volumeID)
+
+	execCommand := "sed -i -e 's#Alias /uploads \"/uploads\"#Alias /" + volumeID + "/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf"
+	//change webdav path using volumeID
+	err = k8sClient.ExecInPod("vd", volumeID, execCommand)
+	if err != nil {
+		panic(err)
+	}
+
+	execCommand = "/usr/sbin/httpd -k restart"
+	err = k8sClient.ExecInPod("vd", volumeID, execCommand)
+	if err != nil {
+		panic(err)
+	}
+
+	//TODO:  k8s resource들 생성한 후
+	//1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumdID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
+	//2. app pod으로 http://ip:60000/hello_flask?ip=<ip> 해서 dom ip 알려주기
+
+	type Output struct {
+		Mount  string       `json:mountPath`
+		Device types.Device `json: device`
+	}
+
+	Mount := "http://155.230.36.27/" + volumeID + "/uploads"
+
+	device = types.Device{
+		IP:       input.IP,
+		ID:       volumeID,
+		Username: input.Username,
+		Password: input.Password,
+		Storage:  input.Storage,
+	}
+
+	output := Output{
+		Mount:  Mount,
+		Device: device,
+	}
+*/
