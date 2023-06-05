@@ -60,10 +60,19 @@ def set_callbacks(settings:dict) -> list:
         callbacks.append(checkpoint)
     
     if 'log_path' in settings.keys():
+        total_steps = settings['dataset_size']//settings['batch_size']
+        # 중간의 50 Steps를 프로파일링
+        mid = total_steps // 2
+        start_step = mid - 24
+        end_step = mid + 25
+        if start_step <= 0:
+            start_step = 1
+        if end_step > total_steps:
+            end_step = total_steps
         profile = tf.keras.callbacks.TensorBoard(
             log_dir=settings['log_path'],
             histogram_freq = 1,
-            profile_batch=[1, 30]
+            profile_batch=[start_step, end_step]
         )
         callbacks.append(profile)
     
@@ -99,6 +108,5 @@ def main():
         epochs=settings['epochs'],
         callbacks=callbacks
     )
-
 
 main()
