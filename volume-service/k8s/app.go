@@ -2,9 +2,16 @@ package k8s
 
 import (
 	"fmt"
-
+	"context"
+	"k8s_old_ref"
+	
 	"github.com/lab-paper-code/ksv/volume-service/types"
+	"k8s.io/client-go/kubernetes"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appsv1 "k8s.io/api/apps/v1"
+
 )
 
 const (
@@ -120,7 +127,7 @@ func (adapter *K8SAdapter) DeleteApp(appRunID string) error {
 	return nil
 }
 
-//APP
+// App deployment example
 /*
 apiVersion: apps/v1
 kind: Deployment
@@ -162,7 +169,7 @@ spec:
       restartPolicy: Always
 */
 
-/*
+
 // CreateAppDeploy creates a App deploy for the given volumeID
 func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error {
 	logger := log.WithFields(log.Fields{
@@ -176,7 +183,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 	deployAppName := client.getDeployAppName(volumeID)
 	deployReplicas := int32(1)
 
-	claim := &appsv1.Deployment{
+	claim := &appsv1.Deployment{ // Deployment enables declarative updates for Pods and ReplicaSets.
 		ObjectMeta: metav1.ObjectMeta{
 			Name:	deployAppName,
 			Labels:	client.getDeployLabels(username, volumeID),
@@ -189,24 +196,24 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 					"app": deployAppName,
 				},
 			},
-			Template: corev1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{ // PodTemplateSpec describes the data a pod should have when created from a template
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"app": deployAppName,
 					},
 				},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
+			Spec: corev1.PodSpec{ // PodSpec is a description of a pod.
+				Containers: []corev1.Container{ // A single application container that you want to run within a pod.
 					{
 						Name: "app-image",
 						Image: "yechae/ksv-app:v4",
 						ImagePullPolicy: "IfNotPresent",
-						Ports: []corev1.ContainerPort{
+						Ports: []corev1.ContainerPort{ // ContainerPort represents a network port in a single container.
 							{
 								ContainerPort: 5000,
 							},
 						},
-						// Resources: corev1.ResourceRequirements{
+						// Resources: corev1.ResourceRequirements{ // ResourceRequirements describes the compute resource requirements.
 						// 	Requests: map[string]string{
 						// 		cpu: "250m",
 
@@ -215,18 +222,18 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 						// 		cpu: "500m",
 						// 	},
 						// },
-						VolumeMounts: []corev1.VolumeMount{
+						VolumeMounts: []corev1.VolumeMount{ // VolumeMount describes a mounting of a Volume within a container.
 							{
 								MountPath: "/mnt",
 								Name: "volumes",
 							},
 						},
-					},//Continers
-					},//Continers
-				Volumes: []corev1.Volume{
+					},//Containers
+					},//Containers
+				Volumes: []corev1.Volume{ // Volume represents a named volume in a pod that may be accessed by any container in the pod.
 					{
 						Name: "volumes",
-						VolumeSource: corev1.VolumeSource{
+						VolumeSource: corev1.VolumeSource{ // Represents the source of a volume to mount.
 							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 								ClaimName: client.getPVCName(volumeID),
 							},
@@ -251,7 +258,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 
 	if err != nil {
 		// failed to get an existing claim
-		_, err = deployclient.Create(ctx, claim, metav1.CreateOptions{})
+		_, err = deployclient.Create(ctx, claim, metav1.CreateOptions{}) // CreateOptions may be provided when creating an API object.
 		if err != nil {
 			print(err,"\n")
 			// failed to create one
@@ -262,7 +269,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 
 		logger.Debugf("Created a App Deploy for user %s, volume id %s", username, volumeID)
 	} else {
-		_, err = deployclient.Update(ctx, claim, metav1.UpdateOptions{})
+		_, err = deployclient.Update(ctx, claim, metav1.UpdateOptions{}) // UpdateOptions may be provided when updating an API object.
 		if err != nil {
 			// failed to create one
 			logger.Errorf("Failed to update a App Deploy for user %s, volume id %s", username, volumeID)
@@ -274,8 +281,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 
 	return nil
 }
-*/
-/*
+
 	//make App ingress
 	err = k8sClient.CreateAppIngress(input.Username, volumeID)
 	if err != nil {
@@ -303,7 +309,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 	}
 
 	//TODO:  k8s resource들 생성한 후
-	//1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumdID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
+	//1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumeID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
 	//2. app pod으로 http://ip:60000/hello_flask?ip=<ip> 해서 dom ip 알려주기
 
 	type Output struct {
@@ -312,7 +318,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 	}
 
 	Mount := "http://155.230.36.27/" + volumeID + "/uploads"
-
+	// 지금과 다름
 	device = types.Device{
 		IP:       input.IP,
 		ID:       volumeID,
@@ -325,4 +331,3 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 		Mount:  Mount,
 		Device: device,
 	}
-*/
