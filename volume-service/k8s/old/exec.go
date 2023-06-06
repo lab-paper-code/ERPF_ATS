@@ -13,8 +13,8 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-//webdav exec
-//sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumdID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf
+// webdav exec
+// sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumdID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf
 
 func (client *K8sClient) ExecInPod(namespace string, volumeID string, command string) error {
 
@@ -23,6 +23,9 @@ func (client *K8sClient) ExecInPod(namespace string, volumeID string, command st
 	// 	panic(err)
 	// }
 
+	// New ~ using the passed context name
+	// return &DeferredLoadingClientConfig
+	// ( use most recent rules even when loading rules change )
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientcmd.NewDefaultClientConfigLoadingRules(),
 		&clientcmd.ConfigOverrides{},
@@ -36,15 +39,14 @@ func (client *K8sClient) ExecInPod(namespace string, volumeID string, command st
 	}
 
 	// Create a Kubernetes core/v1 client.
-	//coerv1client change to client
+	// corev1client change to client
 	coreclient, err := corev1client.NewForConfig(restconfig)
 	if err != nil {
 		panic(err)
 	}
 
-	// Prepare the API URL used to execute another process within the Pod.  In
-	// this case, we'll run a remote shell.
-
+	// vd was webdavnamespace name
+	// get DeploywebdavName : (%s%s, VolumeID, WebdavSuffix)
 	podLabel := client.getDeployWebdavName(volumeID)
 	pods, err := client.clientSet.CoreV1().Pods("vd").List(context.Background(), metav1.ListOptions{
 		LabelSelector: "app=" + podLabel,
@@ -55,10 +57,10 @@ func (client *K8sClient) ExecInPod(namespace string, volumeID string, command st
 	}
 
 	var podName string
-	//var podObj corev1.Pod
+	// var podObj corev1.Pod
 	for _, pod := range pods.Items {
 		podName = pod.Name
-		//podObj = pod
+		// podObj = pod
 	}
 
 	execCommand := []string{
@@ -84,7 +86,11 @@ func (client *K8sClient) ExecInPod(namespace string, volumeID string, command st
 		}, scheme.ParameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(restconfig, "POST", req.URL())
+	// NewSPDYExecutor connects to the provided server and
+	// upgrades the connection to multiplexed bidirectional streams
 
+	// initiates the transport of the standard shell streams
+	// can transport except for nil streams
 	err = exec.Stream(remotecommand.StreamOptions{
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
