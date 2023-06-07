@@ -86,20 +86,26 @@ func (logic *Logic) ExecuteApp(appRun *types.AppRun) error {
 
 	logger.Debug("received ExecuteApp()")
 
-	// TODO: Implement this
-	/*
-		//make App deploy
-		err = k8sClient.CreateAppDeploy(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
+	app, err := logic.GetApp(appRun.AppID)
+	if err != nil {
+		return err
+	}
 
-		//make App service
-		err = k8sClient.CreateAppSVC(input.Username, volumeID)
-		if err != nil {
-			panic(err)
-		}
-	*/
+	device, err := logic.dbAdapter.GetDevice(appRun.DeviceID)
+	if err != nil {
+		return err
+	}
+
+	volume, err := logic.dbAdapter.GetVolume(appRun.VolumeID)
+	if err != nil {
+		return err
+	}
+
+	logger.Debugf("creating App %s for device %s, volume %s", app.Name, device.ID, volume.ID)
+	err = logic.k8sAdapter.CreateApp(&device, &volume, &app, appRun)
+	if err != nil {
+		return err
+	}
 
 	return logic.dbAdapter.InsertAppRun(appRun)
 }
@@ -113,7 +119,26 @@ func (logic *Logic) TerminateAppRun(appRunID string) error {
 
 	logger.Debug("received TerminateAppRun()")
 
-	// TODO: Implement this
+	appRun, err := logic.dbAdapter.GetAppRun(appRunID)
+	if err != nil {
+		return err
+	}
+
+	device, err := logic.dbAdapter.GetDevice(appRun.DeviceID)
+	if err != nil {
+		return err
+	}
+
+	volume, err := logic.dbAdapter.GetVolume(appRun.VolumeID)
+	if err != nil {
+		return err
+	}
+
+	logger.Debugf("stopping App Run %s for device %s, volume %s", appRun.ID, device.ID, volume.ID)
+	err = logic.k8sAdapter.DeleteApp(appRunID)
+	if err != nil {
+		return err
+	}
 
 	return logic.dbAdapter.UpdateAppRunTermination(appRunID, true)
 }

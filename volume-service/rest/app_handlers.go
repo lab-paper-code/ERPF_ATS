@@ -62,6 +62,14 @@ func (adapter *RESTAdapter) handleGetApp(c *gin.Context) {
 
 	appID := c.Param("id")
 
+	err := types.ValidateAppID(appID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	app, err := adapter.logic.GetApp(appID)
 	if err != nil {
 		// fail
@@ -159,6 +167,14 @@ func (adapter *RESTAdapter) handleListAppRuns(c *gin.Context) {
 
 		output.AppRuns = appRuns
 	} else {
+		err := types.ValidateDeviceID(user)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		// device - returns mine
 		appRuns, err := adapter.logic.ListAppRuns(user)
 		if err != nil {
@@ -186,6 +202,14 @@ func (adapter *RESTAdapter) handleGetAppRun(c *gin.Context) {
 
 	user := c.GetString(gin.AuthUserKey)
 	appRunID := c.Param("id")
+
+	err := types.ValidateAppRunID(appRunID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	appRun, err := adapter.logic.GetAppRun(appRunID)
 	if err != nil {
@@ -219,14 +243,30 @@ func (adapter *RESTAdapter) handleExecuteApp(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 	appID := c.Param("id")
 
+	err := types.ValidateAppID(appID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	type appExecutionRequest struct {
-		// define input required
-		DeviceID string `json:"device_id,omitempty"` // optional
+		DeviceID string `json:"device_id,omitempty"`
+		VolumeID string `json:"volume_id"`
 	}
 
 	var input appExecutionRequest
 
-	err := c.BindJSON(&input)
+	err = c.BindJSON(&input)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = types.ValidateVolumeID(input.VolumeID)
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -242,31 +282,37 @@ func (adapter *RESTAdapter) handleExecuteApp(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf("Executing App ID: %s", appID)
-
-	appRun := types.AppRun{
-		ID:    types.NewAppRunID(),
-		AppID: appID,
+	volume, err := adapter.logic.GetVolume(input.VolumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
-	if adapter.isAdminUser(user) && len(input.DeviceID) > 0 {
-		// admin is trying to create a new app
+	if !adapter.isAdminUser(user) && volume.DeviceID != user {
+		// requestiong other's volume info
+		err := xerrors.Errorf("failed to get volume %s, you cannot access other devices' volume info", volume.ID)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	appRun := types.AppRun{
+		ID:       types.NewAppRunID(),
+		VolumeID: input.VolumeID,
+		AppID:    appID,
+	}
+
+	if adapter.isAdminUser(user) {
 		appRun.DeviceID = input.DeviceID
 	} else {
 		appRun.DeviceID = user
 	}
 
-	if len(appRun.DeviceID) == 0 {
+	err = types.ValidateDeviceID(appRun.DeviceID)
+	if err != nil {
 		// fail
-		err = xerrors.Errorf("device ID is not given")
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if len(appRun.AppID) == 0 {
-		// fail
-		err = xerrors.Errorf("app ID is not given")
 		logger.Error(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -295,14 +341,20 @@ func (adapter *RESTAdapter) handleTerminateAppRun(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 	appRunID := c.Param("id")
 
+	err := types.ValidateAppRunID(appRunID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	type appRunTerminationRequest struct {
-		// define input required
-		DeviceID string `json:"device_id,omitempty"` // optional
 	}
 
 	var input appRunTerminationRequest
 
-	err := c.BindJSON(&input)
+	err = c.BindJSON(&input)
 	if err != nil {
 		// fail
 		logger.Error(err)

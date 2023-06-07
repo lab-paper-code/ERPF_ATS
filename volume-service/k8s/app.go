@@ -4,14 +4,120 @@ import (
 	"fmt"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
-	appDeploymentNamePrefix string = objectNamespace
+	appDeploymentNamePrefix string = "app"
+	appDeploymentNamespace  string = objectNamespace
+	appServiceNamePrefix    string = "app"
+	appServiceNamespace     string = objectNamespace
+	appIngressNamePrefix    string = "app"
+	appIngressNamespace     string = objectNamespace
+
+	appContainerVolumeName  string = "app-storage"
+	appContainerPVMountPath string = "/uploads"
 )
 
-func (adapter *K8SAdapter) GetAppDeploymentName(device *types.Device) string {
-	return fmt.Sprintf("%s_%s", appDeploymentNamePrefix, device.ID)
+func (adapter *K8SAdapter) GetAppDeploymentName(appRunID string) string {
+	return fmt.Sprintf("%s_%s", appDeploymentNamePrefix, appRunID)
+}
+
+func (adapter *K8SAdapter) GetAppServiceName(appRunID string) string {
+	return fmt.Sprintf("%s_%s", appServiceNamePrefix, appRunID)
+}
+
+func (adapter *K8SAdapter) GetAppIngressName(appRunID string) string {
+	return fmt.Sprintf("%s_%s", appIngressNamePrefix, appRunID)
+}
+
+func (adapter *K8SAdapter) getAppDeploymentLabels(appRun *types.AppRun) map[string]string {
+	labels := map[string]string{}
+	labels["app-name"] = adapter.GetAppDeploymentName(appRun.ID)
+	labels["app-id"] = appRun.AppID
+	labels["apprun-id"] = appRun.ID
+	labels["volume-id"] = appRun.VolumeID
+	labels["device-id"] = appRun.DeviceID
+	return labels
+}
+
+func (adapter *K8SAdapter) getAppServiceLabels(appRun *types.AppRun) map[string]string {
+	labels := map[string]string{}
+	labels["app-name"] = adapter.GetAppServiceName(appRun.ID)
+	labels["app-id"] = appRun.AppID
+	labels["apprun-id"] = appRun.ID
+	labels["volume-id"] = appRun.VolumeID
+	labels["device-id"] = appRun.DeviceID
+	return labels
+}
+
+func (adapter *K8SAdapter) getAppIngressLabels(appRun *types.AppRun) map[string]string {
+	labels := map[string]string{}
+	labels["app-name"] = adapter.GetAppIngressName(appRun.ID)
+	labels["app-id"] = appRun.AppID
+	labels["apprun-id"] = appRun.ID
+	labels["volume-id"] = appRun.VolumeID
+	labels["device-id"] = appRun.DeviceID
+	return labels
+}
+
+func (adapter *K8SAdapter) CreateApp(device *types.Device, volume *types.Volume, app *types.App, appRun *types.AppRun) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "CreateApp",
+	})
+
+	logger.Debug("received CreateApp()")
+
+	// TODO: Implement
+	/*
+		err := adapter.createAppDeployment(device, volume, app, appRun)
+		if err != nil {
+			return err
+		}
+
+		err = adapter.createAppService(appRun)
+		if err != nil {
+			return err
+		}
+
+		err = adapter.createAppIngress(appRun)
+		if err != nil {
+			panic(err)
+		}
+	*/
+
+	return nil
+}
+
+func (adapter *K8SAdapter) DeleteApp(appRunID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "DeleteApp",
+	})
+
+	logger.Debug("received DeleteApp()")
+
+	/*
+		err := adapter.deleteAppIngress(appRunID)
+		if err != nil {
+			return err
+		}
+
+		err = adapter.deleteAppService(appRunID)
+		if err != nil {
+			return err
+		}
+
+		err = adapter.deleteAppDeployment(appRunID)
+		if err != nil {
+			return err
+		}
+	*/
+
+	return nil
 }
 
 //APP

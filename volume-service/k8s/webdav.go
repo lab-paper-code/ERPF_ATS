@@ -456,3 +456,17 @@ func (adapter *K8SAdapter) DeleteWebdav(volumeID string) error {
 
 	return nil
 }
+
+func (adapter *K8SAdapter) EnsureDeleteWebdav(volumeID string) {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "EnsureDeleteWebdav",
+	})
+
+	logger.Debug("received EnsureDeleteWebdav()")
+
+	adapter.deleteWebdavIngress(volumeID)
+	adapter.deleteWebdavService(volumeID)
+	adapter.deleteWebdavDeployment(volumeID)
+}
