@@ -16,6 +16,17 @@ const (
 )
 
 /*
+apiVersion: v1
+kind: Service
+metadata:
+  name: pod1-webdav-svc #변경
+  namespace: ksv(webdav namespace) #변경
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+  selector:
+    app: pod1-webdav-svc #변경
 ---
 apiVersion: v1
 kind: Service
@@ -71,6 +82,7 @@ func (client *K8sClient) CreateSVC(username string, volumeID string) error {
 					},
 				},
 			},
+			/*
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      client.getAppSVCName(volumeID),
@@ -88,6 +100,7 @@ func (client *K8sClient) CreateSVC(username string, volumeID string) error {
 					},
 					Type: "ClusterIP",
 				},
+				*/ //identical code with CreateApp
 			},
 		},
 	}
@@ -129,7 +142,6 @@ func (client *K8sClient) CreateSVC(username string, volumeID string) error {
 	return nil
 }
 
-// CreatePVC creates a pvc for the given volumeID
 func (client *K8sClient) CreateAppSVC(username string, volumeID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",

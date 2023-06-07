@@ -52,6 +52,10 @@ func (client *K8sClient) getAppIngressPath(volumeID string) string {
 	return fmt.Sprintf("%s%s", ingAppPathSuffix, volumeID)
 }
 
+func (client *K8sClient) getIngressNamespace() string {
+	return ingNamespace
+}
+
 func (client *K8sClient) CreateAppIngress(username string, volumeID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
