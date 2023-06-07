@@ -56,6 +56,14 @@ func (adapter *RESTAdapter) handleListDevices(c *gin.Context) {
 
 		output.Devices = redactedDevices
 	} else {
+		err := types.ValidateDeviceID(user)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		// device - returns mine
 		device, err := adapter.logic.GetDevice(user)
 		if err != nil {
@@ -83,6 +91,14 @@ func (adapter *RESTAdapter) handleGetDevice(c *gin.Context) {
 
 	user := c.GetString(gin.AuthUserKey)
 	deviceID := c.Param("id")
+
+	err := types.ValidateDeviceID(deviceID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	if !adapter.isAdminUser(user) && deviceID != user {
 		// requesting other's device info
@@ -129,21 +145,14 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 		return
 	}
 
-	device := types.Device{
-		ID:          types.NewDeviceID(),
-		IP:          input.IP,
-		Password:    input.Password,
-		Description: input.Description,
-	}
-
-	if len(device.IP) == 0 {
+	if len(input.IP) == 0 {
 		remoteAddrFields := strings.Split(c.Request.RemoteAddr, ":")
 		if len(remoteAddrFields) > 0 {
-			device.IP = remoteAddrFields[0]
+			input.IP = remoteAddrFields[0]
 		}
 	}
 
-	if len(device.Password) == 0 {
+	if len(input.Password) == 0 {
 		// fail
 		err = xerrors.Errorf("password is not given")
 		logger.Error(err)
@@ -151,7 +160,12 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf("ID: %s\tIP: %s", device.ID, device.IP)
+	device := types.Device{
+		ID:          types.NewDeviceID(),
+		IP:          input.IP,
+		Password:    input.Password,
+		Description: input.Description, // optional
+	}
 
 	err = adapter.logic.CreateDevice(&device)
 	if err != nil {
@@ -176,6 +190,14 @@ func (adapter *RESTAdapter) handleUpdateDevice(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 	deviceID := c.Param("id")
 
+	err := types.ValidateDeviceID(deviceID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	if !adapter.isAdminUser(user) && deviceID != user {
 		// requesting other's device info
 		err := xerrors.Errorf("failed to update device %s, you cannot access other device info", deviceID)
@@ -191,7 +213,7 @@ func (adapter *RESTAdapter) handleUpdateDevice(c *gin.Context) {
 
 	var input deviceUpdateRequest
 
-	err := c.BindJSON(&input)
+	err = c.BindJSON(&input)
 	if err != nil {
 		// fail
 		logger.Error(err)

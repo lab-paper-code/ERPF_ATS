@@ -89,6 +89,11 @@ func (logic *Logic) MountVolume(volumeID string) error {
 		return err
 	}
 
+	// already mounted
+	if volume.Mounted {
+		return nil
+	}
+
 	device, err := logic.dbAdapter.GetDevice(volume.DeviceID)
 	if err != nil {
 		return err
@@ -115,6 +120,12 @@ func (logic *Logic) UnmountVolume(volumeID string) error {
 	volume, err := logic.dbAdapter.GetVolume(volumeID)
 	if err != nil {
 		return err
+	}
+
+	// alrady unmounted
+	if !volume.Mounted {
+		logic.k8sAdapter.EnsureDeleteWebdav(volumeID)
+		return nil
 	}
 
 	logger.Debugf("stopping Webdav for device %s, volume %s", volume.DeviceID, volume.ID)

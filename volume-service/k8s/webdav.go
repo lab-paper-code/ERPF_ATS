@@ -439,7 +439,12 @@ func (adapter *K8SAdapter) DeleteWebdav(volumeID string) error {
 
 	logger.Debug("received DeleteWebdav()")
 
-	err := adapter.deleteWebdavService(volumeID)
+	err := adapter.deleteWebdavIngress(volumeID)
+	if err != nil {
+		return err
+	}
+
+	err = adapter.deleteWebdavService(volumeID)
 	if err != nil {
 		return err
 	}
@@ -449,9 +454,19 @@ func (adapter *K8SAdapter) DeleteWebdav(volumeID string) error {
 		return err
 	}
 
-	err = adapter.deleteWebdavIngress(volumeID)
-	if err != nil {
-		return err
-	}
 	return nil
+}
+
+func (adapter *K8SAdapter) EnsureDeleteWebdav(volumeID string) {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "EnsureDeleteWebdav",
+	})
+
+	logger.Debug("received EnsureDeleteWebdav()")
+
+	adapter.deleteWebdavIngress(volumeID)
+	adapter.deleteWebdavService(volumeID)
+	adapter.deleteWebdavDeployment(volumeID)
 }

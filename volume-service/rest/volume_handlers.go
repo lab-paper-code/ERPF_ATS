@@ -54,6 +54,14 @@ func (adapter *RESTAdapter) handleListVolumes(c *gin.Context) {
 
 		output.Volumes = volumes
 	} else {
+		err := types.ValidateDeviceID(user)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		// device - returns mine
 		volumes, err := adapter.logic.ListVolumes(user)
 		if err != nil {
@@ -81,6 +89,14 @@ func (adapter *RESTAdapter) handleGetVolume(c *gin.Context) {
 
 	user := c.GetString(gin.AuthUserKey)
 	volumeID := c.Param("id")
+
+	err := types.ValidateVolumeID(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	volume, err := adapter.logic.GetVolume(volumeID)
 	if err != nil {
@@ -145,15 +161,13 @@ func (adapter *RESTAdapter) handleCreateVolume(c *gin.Context) {
 		volume.DeviceID = user
 	}
 
-	if len(volume.DeviceID) == 0 {
+	err = types.ValidateDeviceID(volume.DeviceID)
+	if err != nil {
 		// fail
-		err = xerrors.Errorf("device ID is not given")
 		logger.Error(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	logger.Debugf("ID: %s\tVolumeSize: %d", volume.ID, volumeSizeNum)
 
 	err = adapter.logic.CreateVolume(&volume)
 	if err != nil {
@@ -178,13 +192,21 @@ func (adapter *RESTAdapter) handleUpdateVolume(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 	volumeID := c.Param("id")
 
+	err := types.ValidateVolumeID(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	type volumeUpdateRequest struct {
 		VolumeSize string `json:"volume_size,omitempty"`
 	}
 
 	var input volumeUpdateRequest
 
-	err := c.BindJSON(&input)
+	err = c.BindJSON(&input)
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -256,13 +278,21 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 	volumeID := c.Param("id")
 
+	err := types.ValidateVolumeID(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	type volumeMountRequest struct {
 		// define input required
 	}
 
 	var input volumeMountRequest
 
-	err := c.BindJSON(&input)
+	err = c.BindJSON(&input)
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -311,13 +341,21 @@ func (adapter *RESTAdapter) handleUnmountVolume(c *gin.Context) {
 	user := c.GetString(gin.AuthUserKey)
 	volumeID := c.Param("id")
 
+	err := types.ValidateVolumeID(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	type volumeUnmountRequest struct {
 		// define input required
 	}
 
 	var input volumeUnmountRequest
 
-	err := c.BindJSON(&input)
+	err = c.BindJSON(&input)
 	if err != nil {
 		// fail
 		logger.Error(err)
