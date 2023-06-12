@@ -61,10 +61,10 @@ def set_callbacks(settings:dict) -> list:
     
     if 'log_path' in settings.keys():
         total_steps = settings['dataset_size']//settings['batch_size']
-        # 중간의 50 Steps를 프로파일링
+        # 중간의 100 Steps를 프로파일링
         mid = total_steps // 2
-        start_step = mid - 24
-        end_step = mid + 25
+        start_step = mid - 49
+        end_step = mid + 50
         if start_step <= 0:
             start_step = 1
         if end_step > total_steps:
