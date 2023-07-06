@@ -1,5 +1,6 @@
 package k8s
 
+/*
 import (
 	"context"
 	"fmt"
@@ -17,7 +18,7 @@ const (
 	ingAppPathSuffix    string = "/app/"
 )
 
-/*
+
 Ingress example
 
 apiVersion: networking.k8s.io/v1
@@ -41,7 +42,7 @@ spec:
                 name: webdav-pod1-svc # 변경
                 port:
                   number: 80
-*/
+
 
 // getAppSvcName makes appIngress name
 func (client *K8sClient) getAppIngressName(volumeID string) string {
@@ -161,3 +162,4 @@ func (client *K8sClient) CreateAppIngress(username string, volumeID string) erro
 
 	return nil
 }
+*/

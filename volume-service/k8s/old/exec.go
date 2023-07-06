@@ -1,5 +1,6 @@
 package k8s
 
+/*
 import (
 	"context"
 	"fmt"
@@ -185,3 +186,4 @@ func (client *K8sClient) WaitPodRun3(username string, volumeID string) error {
 
 	return nil
 }
+*/

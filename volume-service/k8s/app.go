@@ -7,10 +7,9 @@ import (
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -20,7 +19,6 @@ const (
 	appServiceNamespace     string = objectNamespace
 	appIngressNamePrefix    string = "app"
 	appIngressNamespace     string = objectNamespace
-	appIngressPathSuffix    string = "/app/"
 
 	appContainerVolumeName  string = "app-storage"
 	appContainerPVMountPath string = "/uploads"
@@ -68,45 +66,48 @@ func (adapter *K8SAdapter) getAppIngressLabels(appRun *types.AppRun) map[string]
 	return labels
 }
 
-func (adapter *K8SAdapter) GetAppIngressPath(volumeID string) string {
-	return fmt.Sprintf("%s%s", appIngressPathSuffix, volumeID)
+func (adapter *K8SAdapter) GetAppIngressPath(appRunID string) string {
+	return fmt.Sprintf("/app/%s", appRunID)
 }
 
-func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device, volume *types.Volume) []corev1.Container {
-	appImageName := app.DockerImage // js: check input argument when test
-	return []corev1.Container{
+func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device, volume *types.Volume) []apiv1.Container {
+	containerPorts := []apiv1.ContainerPort{}
+	for _, port := range app.OpenPorts {
+		containerPorts = append(containerPorts, apiv1.ContainerPort{
+			ContainerPort: int32(port),
+		})
+	}
+
+	return []apiv1.Container{
 		{
-			Name:            "app-name",
-			Image:           appImageName,
+			Name:            "app",
+			Image:           app.DockerImage,
 			ImagePullPolicy: "IfNotPresent",
-			Ports: []corev1.ContainerPort{
-				{
-					ContainerPort: 5000,
-				},
-			},
-			LivenessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path: "/",
-						Port: intstr.FromInt(80),
-					},
-				},
-				InitialDelaySeconds: 10,
-				PeriodSeconds:       10,
-				FailureThreshold:    3,
-			},
-			ReadinessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path: "/",
-						Port: intstr.FromInt(80),
-					},
-				},
-				InitialDelaySeconds: 10,
-				PeriodSeconds:       10,
-				FailureThreshold:    3,
-			},
-			VolumeMounts: []corev1.VolumeMount{
+			Ports:           containerPorts,
+			// uncomment this part if the app supports liveness probe via port 80
+			//LivenessProbe: &apiv1.Probe{
+			//	ProbeHandler: apiv1.ProbeHandler{
+			//		HTTPGet: &apiv1.HTTPGetAction{
+			//			Path: "/",
+			//			Port: intstr.FromInt(80),
+			//		},
+			//	},
+			//	InitialDelaySeconds: 10,
+			//	PeriodSeconds:       10,
+			//	FailureThreshold:    3,
+			//},
+			//ReadinessProbe: &apiv1.Probe{
+			//	ProbeHandler: apiv1.ProbeHandler{
+			//		HTTPGet: &apiv1.HTTPGetAction{
+			//			Path: "/",
+			//			Port: intstr.FromInt(80),
+			//		},
+			//	},
+			//	InitialDelaySeconds: 10,
+			//	PeriodSeconds:       10,
+			//	FailureThreshold:    3,
+			//},
+			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      appContainerVolumeName,
 					MountPath: appContainerPVMountPath,
@@ -116,14 +117,14 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 	}
 }
 
-func (adapter *K8SAdapter) getAppContainerVolumes(volume *types.Volume) []corev1.Volume {
+func (adapter *K8SAdapter) getAppContainerVolumes(volume *types.Volume) []apiv1.Volume {
 	pvcName := adapter.GetVolumeClaimName(volume.ID)
 
-	containerVolumes := []corev1.Volume{
+	containerVolumes := []apiv1.Volume{
 		{
 			Name: appContainerVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
 					ClaimName: pvcName,
 					ReadOnly:  false,
 				},
@@ -149,7 +150,7 @@ func (adapter *K8SAdapter) createAppDeployment(device *types.Device, volume *typ
 	appContainers := adapter.getAppContainers(app, device, volume)
 	appContainerVolumes := adapter.getAppContainerVolumes(volume)
 
-	claim := &appsv1.Deployment{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      appDeploymentName,
 			Labels:    appDeploymentLabels,
@@ -162,49 +163,37 @@ func (adapter *K8SAdapter) createAppDeployment(device *types.Device, volume *typ
 					"app-name": appDeploymentName,
 				},
 			},
-			Template: corev1.PodTemplateSpec{
+			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   appDeploymentName,
 					Labels: appDeploymentLabels,
 				},
-				Spec: corev1.PodSpec{
+				Spec: apiv1.PodSpec{
 					Containers:    appContainers,
 					Volumes:       appContainerVolumes,
-					RestartPolicy: "Always",
+					RestartPolicy: apiv1.RestartPolicyAlways,
 				}, //spec
 			},
 		},
 	}
 
-	appDeployClient := adapter.clientSet.AppsV1().Deployments(appDeploymentNamespace)
-
-	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
-	_, err := appDeployClient.Get(ctx, claim.GetName(), metav1.GetOptions{})
-
+	deploymentclient := adapter.clientSet.AppsV1().Deployments(appDeploymentNamespace)
+	_, err := deploymentclient.Get(ctx, deployment.GetName(), metav1.GetOptions{})
 	if err != nil {
-		// failed to get an existing claim
-		_, err = appDeployClient.Create(ctx, claim, metav1.CreateOptions{})
-		if err != nil {
-			print(err, "\n")
-			// failed to create one
-			log.Fatal(err)
-			logger.Errorf("Failed to create an appDeploy for device %s, volume %s", device.ID, volume.ID)
-			return err
+		// does not exist
+		_, createErr := deploymentclient.Create(ctx, deployment, metav1.CreateOptions{})
+		if createErr != nil {
+			return createErr
 		}
-
-		logger.Debugf("Created an appDeploy for device %s, volume %s", device.ID, volume.ID)
 	} else {
-		_, err = appDeployClient.Update(ctx, claim, metav1.UpdateOptions{})
-		if err != nil {
-			// failed to create one
-			logger.Errorf("Failed to update an appDeploy for device %s, volume %s", device.ID, volume.ID)
-			return err
+		// exist -> update
+		_, updateErr := deploymentclient.Update(ctx, deployment, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
 		}
-
-		logger.Debugf("Updated an appDeploy for device %s, volume %s", device.ID, volume.ID)
 	}
 
 	return nil
@@ -233,7 +222,7 @@ func (adapter *K8SAdapter) deleteAppDeployment(appRunID string) error {
 	return nil
 }
 
-func (adapter *K8SAdapter) createAppService(appRun *types.AppRun) error {
+func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
 		"struct":   "K8sAdapter",
@@ -245,23 +234,26 @@ func (adapter *K8SAdapter) createAppService(appRun *types.AppRun) error {
 	appServiceName := adapter.GetAppServiceName(appRun.ID)
 	appServiceLabels := adapter.getAppServiceLabels(appRun)
 
-	service := &corev1.Service{
+	servicePorts := []apiv1.ServicePort{}
+	for _, port := range app.OpenPorts {
+		servicePorts = append(servicePorts, apiv1.ServicePort{
+			Port:     int32(port),
+			Protocol: apiv1.ProtocolTCP,
+		})
+	}
+
+	service := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      appServiceName,
 			Labels:    appServiceLabels,
 			Namespace: appServiceNamespace,
 		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Port:     int32(60000),
-					Protocol: corev1.ProtocolTCP,
-				},
-			},
+		Spec: apiv1.ServiceSpec{
+			Ports: servicePorts,
 			Selector: map[string]string{
-				"app": adapter.GetAppDeploymentName(appRun.VolumeID),
+				"app": adapter.GetAppDeploymentName(appRun.ID),
 			},
-			Type: corev1.ServiceTypeClusterIP,
+			Type: apiv1.ServiceTypeClusterIP,
 		},
 	}
 
@@ -310,7 +302,7 @@ func (adapter *K8SAdapter) deleteAppService(appRunID string) error {
 	return nil
 }
 
-func (adapter *K8SAdapter) createAppIngress(appRun *types.AppRun) error {
+func (adapter *K8SAdapter) createAppIngress(app *types.App, appRun *types.AppRun) error {
 
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
@@ -324,6 +316,11 @@ func (adapter *K8SAdapter) createAppIngress(appRun *types.AppRun) error {
 	appIngressLabels := adapter.getAppIngressLabels(appRun)
 
 	pathPrefix := networkingv1.PathTypePrefix
+
+	serviceBackendPort := 0
+	if len(app.OpenPorts) > 0 {
+		serviceBackendPort = app.OpenPorts[0]
+	}
 
 	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -343,13 +340,13 @@ func (adapter *K8SAdapter) createAppIngress(appRun *types.AppRun) error {
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{
 								{
-									Path:     adapter.GetAppIngressPath(appRun.VolumeID),
+									Path:     adapter.GetAppIngressPath(appRun.ID),
 									PathType: &pathPrefix,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
 											Name: adapter.GetAppServiceName(appRun.ID),
 											Port: networkingv1.ServiceBackendPort{
-												Number: 60000,
+												Number: int32(serviceBackendPort),
 											},
 										},
 									},
@@ -421,12 +418,12 @@ func (adapter *K8SAdapter) CreateApp(device *types.Device, volume *types.Volume,
 		return err
 	}
 
-	err = adapter.createAppService(appRun)
+	err = adapter.createAppService(app, appRun)
 	if err != nil {
 		return err
 	}
 
-	err = adapter.createAppIngress(appRun)
+	err = adapter.createAppIngress(app, appRun)
 	if err != nil {
 		panic(err)
 	}

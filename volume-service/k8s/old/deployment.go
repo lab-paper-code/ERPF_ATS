@@ -1,5 +1,6 @@
 package k8s
 
+/*
 import (
 	"context"
 	"fmt"
@@ -22,7 +23,7 @@ const (
 // https://github.com/kubernetes-client/go/blob/master/kubernetes/docs/V1DeploymentList.md
 
 // WEBDAV
-/*
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -92,7 +93,6 @@ spec:
       # uncomment if registry keys are specified
       #imagePullSecrets:
       #- name: <secret_name>
-*/
 
 func (client *K8sClient) getDeployWebdavName(volumeID string) string {
 	return fmt.Sprintf("%s%s", volumeID, deployWebdavSuffix)
@@ -309,7 +309,6 @@ spec:
         persistentVolumeClaim:
           claimName: pod1-pvc #변경
       restartPolicy: Always
-*/
 
 // CreateAppDeploy creates a App deploy for the given volumeID
 func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error {
@@ -420,3 +419,4 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 
 	return nil
 }
+*/

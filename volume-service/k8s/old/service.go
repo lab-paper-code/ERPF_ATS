@@ -1,5 +1,6 @@
 package k8s
 
+/*
 import (
 	"context"
 	"fmt"
@@ -15,7 +16,7 @@ const (
 	svcNamespace    string = "vd"
 )
 
-/*
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -40,7 +41,7 @@ spec:
   selector:
     app: pod1-app-svc #변경
   type: Clust
-*/
+
 
 // getAppSvcName makes appSvc name
 func (client *K8sClient) getAppSVCName(volumeID string) string {
@@ -82,7 +83,9 @@ func (client *K8sClient) CreateSVC(username string, volumeID string) error {
 					},
 				},
 			},
-			/*
+
+
+			///
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      client.getAppSVCName(volumeID),
@@ -100,7 +103,7 @@ func (client *K8sClient) CreateSVC(username string, volumeID string) error {
 					},
 					Type: "ClusterIP",
 				},
-				*/ //identical code with CreateApp
+				 //identical code with CreateApp
 			},
 		},
 	}
@@ -203,3 +206,4 @@ func (client *K8sClient) CreateAppSVC(username string, volumeID string) error {
 
 	return nil
 }
+*/
