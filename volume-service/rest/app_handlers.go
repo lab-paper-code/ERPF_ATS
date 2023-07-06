@@ -99,6 +99,7 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 		Description string `json:"description,omitempty"`
 		DockerImage string `json:"docker_image"`
 		Arguments   string `json:"arguments,omitempty"`
+		OpenPorts   []int  `json:"open_ports,omitempty"`
 	}
 
 	var input appCreationRequest
@@ -125,6 +126,7 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 		Description: input.Description,
 		DockerImage: input.Description,
 		Arguments:   input.Arguments,
+		OpenPorts:   input.OpenPorts,
 	}
 
 	err = adapter.logic.CreateApp(&app)

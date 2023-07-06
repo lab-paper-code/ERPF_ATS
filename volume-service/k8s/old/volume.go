@@ -1,5 +1,6 @@
 package k8s
 
+/*
 import (
 	"context"
 	"fmt"
@@ -20,7 +21,7 @@ const (
 	k8sTimeout time.Duration = 30 * time.Second
 )
 
-/*
+
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -34,7 +35,7 @@ spec:
     requests:
       storage: 20Gi
   storageClassName: rook-cephfs
-*/
+
 
 // getPVCName makes pvc name
 func (client *K8sClient) getPVCName(volumeID string) string {
@@ -125,3 +126,4 @@ func (client *K8sClient) CreatePVC(username string, volumeID string) error {
 
 	return nil
 }
+*/

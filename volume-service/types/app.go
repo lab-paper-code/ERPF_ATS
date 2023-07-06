@@ -22,6 +22,7 @@ type App struct {
 	Description string    `json:"description,omitempty"`
 	DockerImage string    `json:"docker_image"`
 	Arguments   string    `json:"arguments,omitempty"` // a space-separated command-line arguments to run app, array/map not supported
+	OpenPorts   []int     `json:"open_ports,omitempty"`
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
 }
