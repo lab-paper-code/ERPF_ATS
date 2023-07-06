@@ -1,19 +1,24 @@
 package k8s
 
-// corev1 "k8s.io/api/core/v1"
-// resourcev1 "k8s.io/apimachinery/pkg/api/resource"
+import (
+	"context"
+	"fmt"
 
-//"k8s.io/api/networking/v1beta1"
-
-/*
-const (
-	ingWebdavSuffix         string = "-webdav-ing"
-	ingAppSuffix            string = "-app-ing"
-	ingNamespace   			string = "vd"
-	ingWebdavPathSuffix     string = "/"
-	ingAppPathSuffix		string = "/app/"
+	log "github.com/sirupsen/logrus"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	ingWebdavSuffix     string = "-webdav-ing"
+	ingAppSuffix        string = "-app-ing"
+	ingNamespace        string = "vd"
+	ingWebdavPathSuffix string = "/"
+	ingAppPathSuffix    string = "/app/"
+)
+
+/*
+Ingress example
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -36,22 +41,20 @@ spec:
                 name: webdav-pod1-svc # 변경
                 port:
                   number: 80
-
-
+*/
 
 // getAppSvcName makes appIngress name
 func (client *K8sClient) getAppIngressName(volumeID string) string {
 	return fmt.Sprintf("%s%s", volumeID, ingAppSuffix)
 }
 
-
 func (client *K8sClient) getAppIngressPath(volumeID string) string {
 	return fmt.Sprintf("%s%s", ingAppPathSuffix, volumeID)
 }
 
-
-
-
+func (client *K8sClient) getIngressNamespace() string {
+	return ingNamespace
+}
 
 func (client *K8sClient) CreateAppIngress(username string, volumeID string) error {
 	logger := log.WithFields(log.Fields{
@@ -65,13 +68,12 @@ func (client *K8sClient) CreateAppIngress(username string, volumeID string) erro
 
 	claim := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: client.getAppIngressName(volumeID),
+			Name:      client.getAppIngressName(volumeID),
 			Namespace: client.getIngressNamespace(),
 			Annotations: map[string]string{
-				"kubernetes.io/ingress.class": "nginx",
+				"kubernetes.io/ingress.class":                       "nginx",
 				"nginx.ingress.kubernetes.io/proxy-connect-timeout": "150",
-    			"nginx.ingress.kubernetes.io/proxy-read-timeout": "150",
-
+				"nginx.ingress.kubernetes.io/proxy-read-timeout":    "150",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -81,7 +83,7 @@ func (client *K8sClient) CreateAppIngress(username string, volumeID string) erro
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{
 								{
-									Path: client.getAppIngressPath(volumeID),
+									Path:     client.getAppIngressPath(volumeID),
 									PathType: &pathPrefix,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
@@ -96,7 +98,6 @@ func (client *K8sClient) CreateAppIngress(username string, volumeID string) erro
 						},
 					},
 				},
-
 			},
 		},
 	}
@@ -110,7 +111,7 @@ func (client *K8sClient) CreateAppIngress(username string, volumeID string) erro
 	// 		Annotations: {
 	// 			kubernetes.io/ingress.class: "nginx",
 	// 			nginx.ingress.kubernetes.io/proxy-connect-timeout: "150",
-    // 			nginx.ingress.kubernetes.io/proxy-read-timeout: "150",
+	// 			nginx.ingress.kubernetes.io/proxy-read-timeout: "150",
 
 	// 		},
 	// 	},
@@ -139,7 +140,7 @@ func (client *K8sClient) CreateAppIngress(username string, volumeID string) erro
 		// failed to get an existing claim
 		_, err = appIngclient.Create(ctx, claim, metav1.CreateOptions{})
 		if err != nil {
-			print(err,"\n")
+			print(err, "\n")
 			// failed to create one
 			log.Fatal(err)
 			logger.Errorf("Failed to create a appSVC for user %s, volume id %s", username, volumeID)
@@ -160,4 +161,3 @@ func (client *K8sClient) CreateAppIngress(username string, volumeID string) erro
 
 	return nil
 }
-*/
