@@ -21,8 +21,8 @@ type App struct {
 	RequireGPU  bool      `json:"require_gpu,omitempty"`
 	Description string    `json:"description,omitempty"`
 	DockerImage string    `json:"docker_image"`
-	Arguments   string    `json:"arguments,omitempty"`  // a space-separated command-line arguments to run app, array/map not supported
-	OpenPorts   []int     `json:"open_ports,omitempty"` // first element is the main service port to open with ingress setup
+	Arguments   string    `json:"arguments,omitempty"`                        // a space-separated command-line arguments to run app, array/map not supported
+	OpenPorts   []int     `gorm:"type:integer[]" json:"open_ports,omitempty"` // first element is the main service port to open with ingress setup
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
 }
