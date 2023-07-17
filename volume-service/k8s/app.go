@@ -1,10 +1,15 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -61,6 +66,344 @@ func (adapter *K8SAdapter) getAppIngressLabels(appRun *types.AppRun) map[string]
 	return labels
 }
 
+func (adapter *K8SAdapter) GetAppIngressPath(appRunID string) string {
+	return fmt.Sprintf("/app/%s", appRunID)
+}
+
+func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device, volume *types.Volume) []apiv1.Container {
+	containerPorts := []apiv1.ContainerPort{}
+	for _, port := range app.OpenPorts {
+		containerPorts = append(containerPorts, apiv1.ContainerPort{
+			ContainerPort: int32(port),
+		})
+	}
+
+	return []apiv1.Container{
+		{
+			Name:            "app",
+			Image:           app.DockerImage,
+			ImagePullPolicy: "IfNotPresent",
+			Ports:           containerPorts,
+			// uncomment this part if the app supports liveness probe via port 80
+			//LivenessProbe: &apiv1.Probe{
+			//	ProbeHandler: apiv1.ProbeHandler{
+			//		HTTPGet: &apiv1.HTTPGetAction{
+			//			Path: "/",
+			//			Port: intstr.FromInt(80),
+			//		},
+			//	},
+			//	InitialDelaySeconds: 10,
+			//	PeriodSeconds:       10,
+			//	FailureThreshold:    3,
+			//},
+			//ReadinessProbe: &apiv1.Probe{
+			//	ProbeHandler: apiv1.ProbeHandler{
+			//		HTTPGet: &apiv1.HTTPGetAction{
+			//			Path: "/",
+			//			Port: intstr.FromInt(80),
+			//		},
+			//	},
+			//	InitialDelaySeconds: 10,
+			//	PeriodSeconds:       10,
+			//	FailureThreshold:    3,
+			//},
+			VolumeMounts: []apiv1.VolumeMount{
+				{
+					Name:      appContainerVolumeName,
+					MountPath: appContainerPVMountPath,
+				},
+			},
+		},
+	}
+}
+
+func (adapter *K8SAdapter) getAppContainerVolumes(volume *types.Volume) []apiv1.Volume {
+	pvcName := adapter.GetVolumeClaimName(volume.ID)
+
+	containerVolumes := []apiv1.Volume{
+		{
+			Name: appContainerVolumeName,
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: pvcName,
+					ReadOnly:  false,
+				},
+			},
+		},
+	}
+	return containerVolumes
+}
+
+func (adapter *K8SAdapter) createAppDeployment(device *types.Device, volume *types.Volume, app *types.App, appRun *types.AppRun) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8sAdapter",
+		"function": "createAppDeployment",
+	})
+
+	logger.Debug("received createAppDeployment()")
+
+	appDeploymentName := adapter.GetAppDeploymentName(appRun.ID)
+	appDeploymentLabels := adapter.getAppDeploymentLabels(appRun)
+	deployReplicas := int32(1)
+
+	appContainers := adapter.getAppContainers(app, device, volume)
+	appContainerVolumes := adapter.getAppContainerVolumes(volume)
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      appDeploymentName,
+			Labels:    appDeploymentLabels,
+			Namespace: appDeploymentNamespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &deployReplicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app-name": appDeploymentName,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   appDeploymentName,
+					Labels: appDeploymentLabels,
+				},
+				Spec: apiv1.PodSpec{
+					Containers:    appContainers,
+					Volumes:       appContainerVolumes,
+					RestartPolicy: apiv1.RestartPolicyAlways,
+				}, //spec
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	deploymentclient := adapter.clientSet.AppsV1().Deployments(appDeploymentNamespace)
+	_, err := deploymentclient.Get(ctx, deployment.GetName(), metav1.GetOptions{})
+	if err != nil {
+		// does not exist
+		_, createErr := deploymentclient.Create(ctx, deployment, metav1.CreateOptions{})
+		if createErr != nil {
+			return createErr
+		}
+	} else {
+		// exist -> update
+		_, updateErr := deploymentclient.Update(ctx, deployment, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) deleteAppDeployment(appRunID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "deleteAppDeployment",
+	})
+
+	logger.Debug("received deleteAppDeployment()")
+
+	appDeploymentName := adapter.GetAppDeploymentName(appRunID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	deploymentclient := adapter.clientSet.AppsV1().Deployments(appDeploymentNamespace)
+	err := deploymentclient.Delete(ctx, appDeploymentName, *metav1.NewDeleteOptions(0))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8sAdapter",
+		"function": "createAppService",
+	})
+
+	logger.Debug("received createAppService()")
+
+	appServiceName := adapter.GetAppServiceName(appRun.ID)
+	appServiceLabels := adapter.getAppServiceLabels(appRun)
+
+	servicePorts := []apiv1.ServicePort{}
+	for _, port := range app.OpenPorts {
+		servicePorts = append(servicePorts, apiv1.ServicePort{
+			Port:     int32(port),
+			Protocol: apiv1.ProtocolTCP,
+		})
+	}
+
+	service := &apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      appServiceName,
+			Labels:    appServiceLabels,
+			Namespace: appServiceNamespace,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: servicePorts,
+			Selector: map[string]string{
+				"app": adapter.GetAppDeploymentName(appRun.ID),
+			},
+			Type: apiv1.ServiceTypeClusterIP,
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	serviceClient := adapter.clientSet.CoreV1().Services(volumeNamespace)
+	_, err := serviceClient.Get(ctx, service.GetName(), metav1.GetOptions{})
+	if err != nil {
+		// does not exist
+		_, createErr := serviceClient.Create(ctx, service, metav1.CreateOptions{})
+		if createErr != nil {
+			return createErr
+		}
+	} else {
+		// exist -> update
+		_, updateErr := serviceClient.Update(ctx, service, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) deleteAppService(appRunID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "deleteAppService",
+	})
+
+	logger.Debug("received deleteAppService()")
+
+	appServiceName := adapter.GetAppServiceName(appRunID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	serviceClient := adapter.clientSet.CoreV1().Services(appServiceNamespace)
+	err := serviceClient.Delete(ctx, appServiceName, *metav1.NewDeleteOptions(0))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) createAppIngress(app *types.App, appRun *types.AppRun) error {
+
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8sAdapter",
+		"function": "createAppIngress",
+	})
+
+	logger.Debug("received createAppIngress()")
+
+	appIngressName := adapter.GetAppIngressName(appRun.ID)
+	appIngressLabels := adapter.getAppIngressLabels(appRun)
+
+	pathPrefix := networkingv1.PathTypePrefix
+
+	serviceBackendPort := 0
+	if len(app.OpenPorts) > 0 {
+		serviceBackendPort = app.OpenPorts[0]
+	}
+
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      appIngressName,
+			Labels:    appIngressLabels,
+			Namespace: appIngressNamespace,
+			Annotations: map[string]string{
+				"kubernetes.io/ingress.class":                       "nginx",
+				"nginx.ingress.kubernetes.io/proxy-connect-timeout": "150",
+				"nginx.ingress.kubernetes.io/proxy-read-timeout":    "150",
+			},
+		},
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
+				{
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Path:     adapter.GetAppIngressPath(appRun.ID),
+									PathType: &pathPrefix,
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: adapter.GetAppServiceName(appRun.ID),
+											Port: networkingv1.ServiceBackendPort{
+												Number: int32(serviceBackendPort),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	ingressClient := adapter.clientSet.NetworkingV1().Ingresses(volumeNamespace)
+	_, err := ingressClient.Get(ctx, ingress.GetName(), metav1.GetOptions{})
+	if err != nil {
+		// does not exist
+		_, createErr := ingressClient.Create(ctx, ingress, metav1.CreateOptions{})
+		if createErr != nil {
+			return createErr
+		}
+	} else {
+		// exist -> update
+		_, updateErr := ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) deleteAppIngress(appRunID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "deleteAppIngress",
+	})
+
+	logger.Debug("received deleteAppIngress()")
+
+	appIngressName := adapter.GetAppIngressName(appRunID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	ingressClient := adapter.clientSet.NetworkingV1().Ingresses(appIngressNamespace)
+	err := ingressClient.Delete(ctx, appIngressName, *metav1.NewDeleteOptions(0))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (adapter *K8SAdapter) CreateApp(device *types.Device, volume *types.Volume, app *types.App, appRun *types.AppRun) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
@@ -70,23 +413,20 @@ func (adapter *K8SAdapter) CreateApp(device *types.Device, volume *types.Volume,
 
 	logger.Debug("received CreateApp()")
 
-	// TODO: Implement
-	/*
-		err := adapter.createAppDeployment(device, volume, app, appRun)
-		if err != nil {
-			return err
-		}
+	err := adapter.createAppDeployment(device, volume, app, appRun)
+	if err != nil {
+		return err
+	}
 
-		err = adapter.createAppService(appRun)
-		if err != nil {
-			return err
-		}
+	err = adapter.createAppService(app, appRun)
+	if err != nil {
+		return err
+	}
 
-		err = adapter.createAppIngress(appRun)
-		if err != nil {
-			panic(err)
-		}
-	*/
+	err = adapter.createAppIngress(app, appRun)
+	if err != nil {
+		panic(err)
+	}
 
 	return nil
 }
@@ -100,181 +440,38 @@ func (adapter *K8SAdapter) DeleteApp(appRunID string) error {
 
 	logger.Debug("received DeleteApp()")
 
-	/*
-		err := adapter.deleteAppIngress(appRunID)
-		if err != nil {
-			return err
-		}
-
-		err = adapter.deleteAppService(appRunID)
-		if err != nil {
-			return err
-		}
-
-		err = adapter.deleteAppDeployment(appRunID)
-		if err != nil {
-			return err
-		}
-	*/
-
-	return nil
-}
-
-//APP
-/*
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: pod1-app #변경
-  namespace: ksv
-
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: pod1-app #변경
-  revisionHistoryLimit: 2
-  template:
-    metadata:
-      labels:
-        app: pod1-app #변경
-    spec:
-      containers:
-        - name: app-image
-          #image: yechae/ksv-app:v3
-          image: yechae/kube-flask:v4
-          imagePullPolicy: IfNotPresent
-          ports:
-          - containerPort: 5000
-          volumeMounts:
-          - mountPath: "/mnt"
-            name: volumes
-          resources:
-            requests:
-              cpu: "250m"
-            limits:
-              cpu: "500m"
-
-      volumes:
-      - name: volumes
-        persistentVolumeClaim:
-          claimName: pod1-pvc #변경
-      restartPolicy: Always
-*/
-
-/*
-// CreateAppDeploy creates a App deploy for the given volumeID
-func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error {
-	logger := log.WithFields(log.Fields{
-		"package":  "k8s",
-		"struct":   "K8sClient",
-		"function": "CreateAppDeploy",
-	})
-
-	logger.Debugf("Creating a App Deploy for user %s, volume id %s", username, volumeID)
-
-	deployAppName := client.getDeployAppName(volumeID)
-	deployReplicas := int32(1)
-
-	claim := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:	deployAppName,
-			Labels:	client.getDeployLabels(username, volumeID),
-			Namespace:	client.getDeployNamespace(),
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &deployReplicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": deployAppName,
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": deployAppName,
-					},
-				},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name: "app-image",
-						Image: "yechae/ksv-app:v4",
-						ImagePullPolicy: "IfNotPresent",
-						Ports: []corev1.ContainerPort{
-							{
-								ContainerPort: 5000,
-							},
-						},
-						// Resources: corev1.ResourceRequirements{
-						// 	Requests: map[string]string{
-						// 		cpu: "250m",
-
-						// 	},
-						// 	Limits: map[string]string{
-						// 		cpu: "500m",
-						// 	},
-						// },
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								MountPath: "/mnt",
-								Name: "volumes",
-							},
-						},
-					},//Continers
-					},//Continers
-				Volumes: []corev1.Volume{
-					{
-						Name: "volumes",
-						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: client.getPVCName(volumeID),
-							},
-
-						},
-					},
-				},
-				RestartPolicy: "Always",
-				},//spec
-			},
-			},
-		}
-
-
-	deployclient := client.clientSet.AppsV1().Deployments(client.getDeployNamespace())
-
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(context.Background(), k8sTimeout)
-	defer cancel()
-
-	_, err := deployclient.Get(ctx, claim.GetName(), metav1.GetOptions{})
-
+	err := adapter.deleteAppIngress(appRunID)
 	if err != nil {
-		// failed to get an existing claim
-		_, err = deployclient.Create(ctx, claim, metav1.CreateOptions{})
-		if err != nil {
-			print(err,"\n")
-			// failed to create one
-			log.Fatal(err)
-			logger.Errorf("Failed to create a App Deploy for user %s, volume id %s", username, volumeID)
-			return err
-		}
+		return err
+	}
 
-		logger.Debugf("Created a App Deploy for user %s, volume id %s", username, volumeID)
-	} else {
-		_, err = deployclient.Update(ctx, claim, metav1.UpdateOptions{})
-		if err != nil {
-			// failed to create one
-			logger.Errorf("Failed to update a App Deploy for user %s, volume id %s", username, volumeID)
-			return err
-		}
+	err = adapter.deleteAppService(appRunID)
+	if err != nil {
+		return err
+	}
 
-		logger.Debugf("Updated a App Deploy for user %s, volume id %s", username, volumeID)
+	err = adapter.deleteAppDeployment(appRunID)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
-*/
+
+func (adapter *K8SAdapter) EnsureDeleteApp(appRunID string) {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "EnsureDeleteApp",
+	})
+
+	logger.Debug("received EnsureDeleteApp()")
+
+	adapter.deleteAppIngress(appRunID)
+	adapter.deleteAppService(appRunID)
+	adapter.deleteAppDeployment(appRunID)
+}
+
 /*
 	//make App ingress
 	err = k8sClient.CreateAppIngress(input.Username, volumeID)
@@ -282,12 +479,15 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 		panic(err)
 	}
 
+
 	err = k8sClient.WaitPodRun3(input.Username, volumeID)
 	if err != nil {
 		panic(err)
 	}
 
+
 	logger.Infof("All pods in podname=\"%s\" are running!", volumeID)
+
 
 	execCommand := "sed -i -e 's#Alias /uploads \"/uploads\"#Alias /" + volumeID + "/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf"
 	//change webdav path using volumeID
@@ -296,6 +496,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 		panic(err)
 	}
 
+
 	execCommand = "/usr/sbin/httpd -k restart"
 	err = k8sClient.ExecInPod("vd", volumeID, execCommand)
 	if err != nil {
@@ -303,16 +504,18 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 	}
 
 	//TODO:  k8s resource들 생성한 후
-	//1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumdID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
+	//1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumeID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
 	//2. app pod으로 http://ip:60000/hello_flask?ip=<ip> 해서 dom ip 알려주기
+
 
 	type Output struct {
 		Mount  string       `json:mountPath`
 		Device types.Device `json: device`
 	}
 
-	Mount := "http://155.230.36.27/" + volumeID + "/uploads"
 
+	Mount := "http://155.230.36.27/" + volumeID + "/uploads"
+	// 지금과 다름
 	device = types.Device{
 		IP:       input.IP,
 		ID:       volumeID,
@@ -320,6 +523,7 @@ func (client *K8sClient) CreateAppDeploy(username string, volumeID string) error
 		Password: input.Password,
 		Storage:  input.Storage,
 	}
+
 
 	output := Output{
 		Mount:  Mount,
