@@ -23,9 +23,9 @@ def get_args(argv: list) -> dict:
     settings = {
         # Default setting
         'dataset_path': './images',
-        'dataset_size': 0,
+        'dataset_size': 50000,
         'batch_size': 32,
-        'epochs': 10,
+        'epochs': 1,
     }
 
     for arg in argv:
@@ -69,6 +69,7 @@ def set_callbacks(settings:dict) -> list:
             start_step = 1
         if end_step > total_steps:
             end_step = total_steps
+
         profile = tf.keras.callbacks.TensorBoard(
             log_dir=settings['log_path'],
             histogram_freq = 1,
