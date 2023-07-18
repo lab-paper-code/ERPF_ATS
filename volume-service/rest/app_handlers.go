@@ -122,9 +122,10 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 
 	app := types.App{
 		ID:          types.NewAppID(),
+		Name:        input.Name,
 		RequireGPU:  input.RequireGPU,
 		Description: input.Description,
-		DockerImage: input.Description,
+		DockerImage: input.DockerImage,
 		Arguments:   input.Arguments,
 		OpenPorts:   input.OpenPorts,
 	}
