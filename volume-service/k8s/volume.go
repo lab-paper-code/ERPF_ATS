@@ -3,6 +3,8 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -21,8 +23,11 @@ func (adapter *K8SAdapter) GetStorageClassName() string {
 	return storageClassName
 }
 
-func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string {
-	return fmt.Sprintf("%s_%s", volumeClaimNamePrefix, volumeID)
+func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string { // modified to avoid kubernetes error
+	volumeID = strings.ToLower(volumeID)
+	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
+	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
+	return fmt.Sprintf("%s-%s", volumeClaimNamePrefix, validSubdomain)
 }
 
 func (adapter *K8SAdapter) getVolumeLabels(volume *types.Volume) map[string]string {
