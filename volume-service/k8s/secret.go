@@ -3,6 +3,8 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -16,7 +18,10 @@ const (
 )
 
 func (adapter *K8SAdapter) GetSecretName(device *types.Device) string {
-	return fmt.Sprintf("%s_%s", secretNamePrefix, device.ID)
+	deviceID := strings.ToLower(device.ID)
+	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(deviceID, "-") // change other patterns with hyphen(-)
+	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
+	return fmt.Sprintf("%s-%s", secretNamePrefix, validSubdomain)
 }
 
 func (adapter *K8SAdapter) getSecretLabels(device *types.Device) map[string]string {
