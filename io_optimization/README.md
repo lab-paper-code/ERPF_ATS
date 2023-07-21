@@ -23,7 +23,7 @@ sh setup.sh
 `scripts/image_fine-tuning.py` 스크립트를 실행한다.
 
 ```shell
-python3 script/image_fine-tuning.py
+python3 scripts/image_fine-tuning.py
 ```
 
 적용할 수 있는 옵션은 다음과 같다.
@@ -33,6 +33,12 @@ python3 script/image_fine-tuning.py
 * `--epochs`: 에포크 횟수. 디폴트 값은 `1`이다.
 * `--log_path`: TensorFlow profiling 결과를 저장할 경로. 디폴트 값은 없으며, **설정하지 않은 경우 프로파일링을 수행하지 않는다.**
 * `--checkpoint_path`: 학습 도중 체크포인트를 저장할 경로. 디폴트 값은 없으며, **설정하지 않은 경우 체크포인트를 저장하지 않는다.**
+* `--base_model`: Fine-tuning할 pre-trained model. 디폴트 값은 없음.
+
+옵션 적용 예시:
+```shell
+python3 scripts/image_fine-tuning.py --epochs=5 --base_model=imagenet
+```
 
 ## 3. Profiling Result 확인
 **스크립트 실행 시 `--log_path`를 설정했을 때에만 확인 가능**  

@@ -19,6 +19,7 @@ def get_args(argv: list) -> dict:
         'log_path',
         'batch_size',
         'epochs',
+        'base_model'
     ]
     settings = {
         # Default setting
@@ -84,14 +85,17 @@ def main():
     callbacks = set_callbacks(settings)
 
     # Set model
-    base_model = MobileNet(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
-    x = base_model.output
-    x = GlobalAveragePooling2D()(x)
+    if 'base_model' in settings.keys():
+        base_model = MobileNet(weights=settings['base_model'], include_top=False, input_shape=(224, 224, 3))
+        inputs = base_model.input
+        x = base_model.output
+        x = GlobalAveragePooling2D()(x)
+    else:
+        inputs = tf.keras.Input(shape=(224, 224, 3))
+        x = GlobalAveragePooling2D()(inputs)
     x = Dense(1024, activation='relu')(x)
     predictions = Dense(1000, activation='softmax')(x)
-    model = Model(inputs=base_model.input, outputs=predictions)
-    for layer in base_model.layers:
-        layer.trainable = False
+    model = Model(inputs=inputs, outputs=predictions)
     model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
 
     # Load and preprocess the data
