@@ -54,12 +54,17 @@ func processCommand(command *cobra.Command, args []string) error {
 	logger.Info("DB Adapter Started")
 
 	logger.Info("Starting K8S Adapter...")
-	k8sAdapter, err := k8s.Start(config)
-	if err != nil {
-		logger.Fatal(err)
+	var k8sAdapter *k8s.K8SAdapter
+	if config.NoKubernetes {
+		logger.Info("Disable K8S Adapter")
+	} else {
+		k8sAdapter, err = k8s.Start(config)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		defer k8sAdapter.Stop()
+		logger.Info("K8S Adapter Started")
 	}
-	defer k8sAdapter.Stop()
-	logger.Info("K8S Adapter Started")
 
 	logik, err := logic.Start(config, dbAdapter, k8sAdapter)
 	if err != nil {
