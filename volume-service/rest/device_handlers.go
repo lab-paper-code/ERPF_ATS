@@ -13,12 +13,12 @@ import (
 // setupDeviceRouter setup http request router for device
 func (adapter *RESTAdapter) setupDeviceRouter() {
 	// any devices can call these APIs
-	adapter.router.GET("/devices", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListDevices)
-	adapter.router.GET("/devices/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetDevice)
-	adapter.router.PATCH("/devices/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUpdateDevice)
+	adapter.router.GET("/devices", adapter.basicAuthDeviceOrAdmin, adapter.handleListDevices)
+	adapter.router.GET("/devices/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetDevice)
+	adapter.router.PATCH("/devices/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUpdateDevice)
 
 	// any devices can call these APIs
-	adapter.router.POST("/devices", gin.BasicAuth(adapter.getAdminUserAccounts()), adapter.handleRegisterDevice)
+	adapter.router.POST("/devices", adapter.basicAuthAdmin, adapter.handleRegisterDevice)
 }
 
 func (adapter *RESTAdapter) handleListDevices(c *gin.Context) {

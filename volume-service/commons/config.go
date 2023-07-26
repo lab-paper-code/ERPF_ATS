@@ -30,6 +30,7 @@ type Config struct {
 
 	// Kubernetes related
 	KubeConfigPath string `yaml:"kube_config_path,omitempty" json:"kube_config_path,omitempty" envconfig:"VOLUME_SERVICE_KUBE_CONFIG_PATH"`
+	NoKubernetes   bool   `yaml:"no_kubernetes,omitempty" json:"no_kubernetes,omitempty" envconfig:"NO_KUBERNETES"`
 
 	LogLevel string `yaml:"log_level,omitempty" json:"log_level,omitempty" envconfig:"VOLUME_SERVICE_LOG_LEVEL"`
 }
@@ -52,6 +53,7 @@ func GetDefaultConfig() *Config {
 		RestAdminPassword: defaultRestAdminPassword,
 		RestPort:          defaultRestPort,
 		KubeConfigPath:    defaultKubeConfigPath,
+		NoKubernetes:      false,
 		LogLevel:          defaultLogLevel,
 	}
 }

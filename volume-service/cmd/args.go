@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	"github.com/lab-paper-code/ksv/volume-service/db"
@@ -10,13 +9,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	configPath   string
+	envConfig    bool
+	version      bool
+	help         bool
+	debug        bool
+	clearDB      bool
+	noKubernetes bool
+)
+
 func setCommonFlags(command *cobra.Command) {
-	command.Flags().StringP("config", "c", "", "Set config file (yaml or json)")
-	command.Flags().BoolP("envconfig", "e", false, "Read config from environmental variables")
-	command.Flags().BoolP("version", "v", false, "Print version")
-	command.Flags().BoolP("help", "h", false, "Print help")
-	command.Flags().BoolP("debug", "d", false, "Enable debug mode")
-	command.Flags().Bool("clear_db", false, "Clear DB data")
+	command.Flags().StringVarP(&configPath, "config", "c", "", "Set config file (yaml or json)")
+	command.Flags().BoolVarP(&envConfig, "envconfig", "e", false, "Read config from environmental variables")
+	command.Flags().BoolVarP(&version, "version", "v", false, "Print version")
+	command.Flags().BoolVarP(&help, "help", "h", false, "Print help")
+	command.Flags().BoolVarP(&debug, "debug", "d", false, "Enable debug mode")
+	command.Flags().BoolVar(&clearDB, "clear_db", false, "Clear DB data")
+	command.Flags().BoolVar(&noKubernetes, "no_kubernetes", false, "No Kubernetes")
 }
 
 func processFlags(command *cobra.Command) (bool, error) {
@@ -25,80 +35,40 @@ func processFlags(command *cobra.Command) (bool, error) {
 		"function": "processFlags",
 	})
 
-	debug := false
-	debugFlag := command.Flags().Lookup("debug")
-	if debugFlag != nil {
-		debugMode, err := strconv.ParseBool(debugFlag.Value.String())
-		if err != nil {
-			debug = false
-		}
-
-		debug = debugMode
-	}
-
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	helpFlag := command.Flags().Lookup("help")
-	if helpFlag != nil {
-		help, err := strconv.ParseBool(helpFlag.Value.String())
-		if err != nil {
-			help = false
-		}
-
-		if help {
-			printHelp(command)
-			return false, nil // stop here
-		}
+	if help {
+		printHelp(command)
+		return false, nil // stop here
 	}
 
-	versionFlag := command.Flags().Lookup("version")
-	if versionFlag != nil {
-		version, err := strconv.ParseBool(versionFlag.Value.String())
-		if err != nil {
-			version = false
-		}
-
-		if version {
-			printVersion(command)
-			return false, nil // stop here
-		}
+	if version {
+		printVersion(command)
+		return false, nil // stop here
 	}
 
-	configFlag := command.Flags().Lookup("config")
-	if configFlag != nil {
-		configPath := configFlag.Value.String()
-		if len(configPath) > 0 {
-			loadedConfig, err := commons.LoadConfigFile(configPath)
-			if err != nil {
-				logger.Error(err)
-				return false, err // stop here
-			}
-
-			// overwrite config
-			config = loadedConfig
-		}
-	}
-
-	envConfigFlag := command.Flags().Lookup("envconfig")
-	if envConfigFlag != nil {
-		envConfig, err := strconv.ParseBool(envConfigFlag.Value.String())
+	if len(configPath) > 0 {
+		loadedConfig, err := commons.LoadConfigFile(configPath)
 		if err != nil {
 			logger.Error(err)
 			return false, err // stop here
 		}
 
-		if envConfig {
-			loadedConfig, err := commons.LoadConfigEnv()
-			if err != nil {
-				logger.Error(err)
-				return false, err // stop here
-			}
+		// overwrite config
+		config = loadedConfig
+	}
 
-			// overwrite config
-			config = loadedConfig
+	if envConfig {
+		loadedConfig, err := commons.LoadConfigEnv()
+		if err != nil {
+			logger.Error(err)
+			return false, err // stop here
 		}
+
+		// overwrite config
+		config = loadedConfig
 	}
 
 	log.SetLevel(config.GetLogLevel())
@@ -108,18 +78,16 @@ func processFlags(command *cobra.Command) (bool, error) {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	clearDBDataFlag := command.Flags().Lookup("clear_db")
-	if clearDBDataFlag != nil {
-		clearDBDataVal, err := strconv.ParseBool(clearDBDataFlag.Value.String())
-		if err == nil && clearDBDataVal {
-			// clear db
-			err = db.RemoveDBFile(config)
-			if err != nil {
-				logger.Error(err)
-				return false, err
-			}
+	if clearDB {
+		// clear db
+		err := db.RemoveDBFile(config)
+		if err != nil {
+			logger.Error(err)
+			return false, err
 		}
 	}
+
+	config.NoKubernetes = noKubernetes
 
 	return true, nil // contiue
 }

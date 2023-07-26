@@ -5,28 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (logic *Logic) ListDeviceIDPasswordMap() (map[string]string, error) {
-	logger := log.WithFields(log.Fields{
-		"package":  "logic",
-		"struct":   "Logic",
-		"function": "ListDeviceIDPasswordMap",
-	})
-
-	logger.Debug("received ListDeviceIDPasswordMap()")
-
-	devices, err := logic.dbAdapter.ListDevices()
-	if err != nil {
-		return nil, err
-	}
-
-	idPasswordMap := map[string]string{}
-	for _, device := range devices {
-		idPasswordMap[device.ID] = device.Password
-	}
-
-	return idPasswordMap, nil
-}
-
 func (logic *Logic) ListDevices() ([]types.Device, error) {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
@@ -60,9 +38,13 @@ func (logic *Logic) CreateDevice(device *types.Device) error {
 
 	logger.Debug("received CreateDevice()")
 
-	err := logic.k8sAdapter.CreateSecret(device)
-	if err != nil {
-		return err
+	if logic.config.NoKubernetes {
+		logger.Debug("bypass k8sAdapter.CreateSecret()")
+	} else {
+		err := logic.k8sAdapter.CreateSecret(device)
+		if err != nil {
+			return err
+		}
 	}
 
 	return logic.dbAdapter.InsertDevice(device)
