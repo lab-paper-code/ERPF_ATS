@@ -1,0 +1,9 @@
+{
+    "sys_path": "/home/palisade1/Desktop/ksv/volume-service/test",
+
+    "apps": ["http://155.230.36.25:31200/apps", "http://155.230.36.25:31200/apps/"],
+    "appruns":["http://155.230.36.25:31200/appruns", "http://155.230.36.25:31200/appruns/"],
+    "devices":["http://155.230.36.25:31200/devices", "http://155.230.36.25:31200/devices/"],
+    "volumes":["http://155.230.36.25:31200/volumes", "http://155.230.36.25:31200/volumes/"]
+    
+}

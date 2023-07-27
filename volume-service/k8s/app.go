@@ -3,6 +3,8 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -25,15 +27,24 @@ const (
 )
 
 func (adapter *K8SAdapter) GetAppDeploymentName(appRunID string) string {
-	return fmt.Sprintf("%s_%s", appDeploymentNamePrefix, appRunID)
+	appRunID = strings.ToLower(appRunID)
+	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(appRunID, "-") // change other patterns with hyphen(-)
+	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
+	return fmt.Sprintf("%s-%s", appDeploymentNamePrefix, validSubdomain)
 }
 
 func (adapter *K8SAdapter) GetAppServiceName(appRunID string) string {
-	return fmt.Sprintf("%s_%s", appServiceNamePrefix, appRunID)
+	appRunID = strings.ToLower(appRunID)
+	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(appRunID, "-") // change other patterns with hyphen(-)
+	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
+	return fmt.Sprintf("%s-%s", appServiceNamePrefix, validSubdomain)
 }
 
 func (adapter *K8SAdapter) GetAppIngressName(appRunID string) string {
-	return fmt.Sprintf("%s_%s", appIngressNamePrefix, appRunID)
+	appRunID = strings.ToLower(appRunID)
+	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(appRunID, "-") // change other patterns with hyphen(-)
+	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
+	return fmt.Sprintf("%s-%s", appIngressNamePrefix, validSubdomain)
 }
 
 func (adapter *K8SAdapter) getAppDeploymentLabels(appRun *types.AppRun) map[string]string {
@@ -86,26 +97,26 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 			Ports:           containerPorts,
 			// uncomment this part if the app supports liveness probe via port 80
 			//LivenessProbe: &apiv1.Probe{
-			//	ProbeHandler: apiv1.ProbeHandler{
-			//		HTTPGet: &apiv1.HTTPGetAction{
-			//			Path: "/",
-			//			Port: intstr.FromInt(80),
-			//		},
-			//	},
-			//	InitialDelaySeconds: 10,
-			//	PeriodSeconds:       10,
-			//	FailureThreshold:    3,
+			//  ProbeHandler: apiv1.ProbeHandler{
+			//      HTTPGet: &apiv1.HTTPGetAction{
+			//          Path: "/",
+			//          Port: intstr.FromInt(80),
+			//      },
+			//  },
+			//  InitialDelaySeconds: 10,
+			//  PeriodSeconds:       10,
+			//  FailureThreshold:    3,
 			//},
 			//ReadinessProbe: &apiv1.Probe{
-			//	ProbeHandler: apiv1.ProbeHandler{
-			//		HTTPGet: &apiv1.HTTPGetAction{
-			//			Path: "/",
-			//			Port: intstr.FromInt(80),
-			//		},
-			//	},
-			//	InitialDelaySeconds: 10,
-			//	PeriodSeconds:       10,
-			//	FailureThreshold:    3,
+			//  ProbeHandler: apiv1.ProbeHandler{
+			//      HTTPGet: &apiv1.HTTPGetAction{
+			//          Path: "/",
+			//          Port: intstr.FromInt(80),
+			//      },
+			//  },
+			//  InitialDelaySeconds: 10,
+			//  PeriodSeconds:       10,
+			//  FailureThreshold:    3,
 			//},
 			VolumeMounts: []apiv1.VolumeMount{
 				{
@@ -473,60 +484,30 @@ func (adapter *K8SAdapter) EnsureDeleteApp(appRunID string) {
 }
 
 /*
-	//make App ingress
-	err = k8sClient.CreateAppIngress(input.Username, volumeID)
-	if err != nil {
-		panic(err)
-	}
+   //TODO:  k8s resource들 생성한 후
+   //1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumeID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
+   //2. app pod으로 http://ip:60000/hello_flask?ip=<ip> 해서 dom ip 알려주기
 
 
-	err = k8sClient.WaitPodRun3(input.Username, volumeID)
-	if err != nil {
-		panic(err)
-	}
+   type Output struct {
+       Mount  string       `json:mountPath`
+       Device types.Device `json: device`
+   }
 
 
-	logger.Infof("All pods in podname=\"%s\" are running!", volumeID)
+   Mount := "http://155.230.36.27/" + volumeID + "/uploads"
+   // 지금과 다름
+   device = types.Device{
+       IP:       input.IP,
+       ID:       volumeID,
+       Username: input.Username,
+       Password: input.Password,
+       Storage:  input.Storage,
+   }
 
 
-	execCommand := "sed -i -e 's#Alias /uploads \"/uploads\"#Alias /" + volumeID + "/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf"
-	//change webdav path using volumeID
-	err = k8sClient.ExecInPod("vd", volumeID, execCommand)
-	if err != nil {
-		panic(err)
-	}
-
-
-	execCommand = "/usr/sbin/httpd -k restart"
-	err = k8sClient.ExecInPod("vd", volumeID, execCommand)
-	if err != nil {
-		panic(err)
-	}
-
-	//TODO:  k8s resource들 생성한 후
-	//1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumeID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
-	//2. app pod으로 http://ip:60000/hello_flask?ip=<ip> 해서 dom ip 알려주기
-
-
-	type Output struct {
-		Mount  string       `json:mountPath`
-		Device types.Device `json: device`
-	}
-
-
-	Mount := "http://155.230.36.27/" + volumeID + "/uploads"
-	// 지금과 다름
-	device = types.Device{
-		IP:       input.IP,
-		ID:       volumeID,
-		Username: input.Username,
-		Password: input.Password,
-		Storage:  input.Storage,
-	}
-
-
-	output := Output{
-		Mount:  Mount,
-		Device: device,
-	}
+   output := Output{
+       Mount:  Mount,
+       Device: device,
+   }
 */

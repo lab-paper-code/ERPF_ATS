@@ -1,6 +1,14 @@
-def get_login_info(): # function getting ID, PASSWORD for sending request, combine with AppRegisterRequest? -> Q. Login everytime we post?
-    id=input("ID: ")
-    passwd=input("PASSWORD: ")
+import getpass
+
+def admin_login():
+    id=getpass.getpass("ID: ")
+    passwd=getpass.getpass("Password: ")
+    print()
+    return id, passwd
+
+def device_login(): 
+    id=input("Device ID: ")
+    passwd=input("Password: ")
     print()
     return id, passwd
 
