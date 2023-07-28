@@ -6,27 +6,40 @@ import (
 )
 
 func (adapter *DBAdapter) ListApps() ([]types.App, error) {
-	apps := []types.App{}
-	result := adapter.db.Find(&apps)
+	sqliteApps := []types.AppSQLiteObj{}
+	result := adapter.db.Find(&sqliteApps)
 	if result.Error != nil {
 		return nil, result.Error
+	}
+
+	// convert to App
+	apps := []types.App{}
+	for _, sqliteApp := range sqliteApps {
+		apps = append(apps, sqliteApp.ToAppObj())
 	}
 
 	return apps, nil
 }
 
 func (adapter *DBAdapter) GetApp(appID string) (types.App, error) {
+	var sqliteApp types.AppSQLiteObj
 	var app types.App
-	result := adapter.db.Where("id = ?", appID).First(&app)
+	result := adapter.db.Where("id = ?", appID).First(&sqliteApp)
 	if result.Error != nil {
 		return app, result.Error
 	}
+
+	// convert to App
+	app = sqliteApp.ToAppObj()
 
 	return app, nil
 }
 
 func (adapter *DBAdapter) InsertApp(app *types.App) error {
-	result := adapter.db.Create(app)
+	// convert to AppSQLiteObj
+	sqliteApp := app.ToAppSQLiteObj()
+
+	result := adapter.db.Create(&sqliteApp)
 	if result.Error != nil {
 		return result.Error
 	}

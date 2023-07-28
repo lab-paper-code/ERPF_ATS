@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,10 +22,67 @@ type App struct {
 	RequireGPU  bool      `json:"require_gpu,omitempty"`
 	Description string    `json:"description,omitempty"`
 	DockerImage string    `json:"docker_image"`
-	Arguments   string    `json:"arguments,omitempty"`                        // a space-separated command-line arguments to run app, array/map not supported
-	OpenPorts   []int     `gorm:"type:integer[]" json:"open_ports,omitempty"` // first element is the main service port to open with ingress setup
+	Arguments   string    `json:"arguments,omitempty"`  // a space-separated command-line arguments to run app, array/map not supported
+	OpenPorts   []int     `json:"open_ports,omitempty"` // first element is the main service port to open with ingress setup
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
+}
+
+// App represents an app, holding all necessary info. about app
+type AppSQLiteObj struct {
+	ID          string    `json:"id" gorm:"primaryKey"`
+	Name        string    `json:"name"`
+	RequireGPU  bool      `json:"require_gpu,omitempty"`
+	Description string    `json:"description,omitempty"`
+	DockerImage string    `json:"docker_image"`
+	Arguments   string    `json:"arguments,omitempty"`
+	OpenPorts   string    `json:"open_ports,omitempty"` // store it as a comma-separated string
+	CreatedAt   time.Time `json:"created_at,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at,omitempty"`
+}
+
+func (app *App) ToAppSQLiteObj() AppSQLiteObj {
+	openports := []string{}
+	for _, port := range app.OpenPorts {
+		portString := fmt.Sprintf("%d", port)
+		openports = append(openports, portString)
+	}
+
+	openPortsCSV := strings.Join(openports, ",")
+
+	return AppSQLiteObj{
+		ID:          app.ID,
+		Name:        app.Name,
+		RequireGPU:  app.RequireGPU,
+		Description: app.Description,
+		DockerImage: app.DockerImage,
+		Arguments:   app.Arguments,
+		OpenPorts:   openPortsCSV,
+		CreatedAt:   app.CreatedAt,
+		UpdatedAt:   app.UpdatedAt,
+	}
+}
+
+func (app *AppSQLiteObj) ToAppObj() App {
+	openports := []int{}
+	openportsStringArr := strings.Split(app.OpenPorts, ",")
+
+	for _, port := range openportsStringArr {
+		portInt, _ := strconv.Atoi(port)
+		openports = append(openports, portInt)
+	}
+
+	return App{
+		ID:          app.ID,
+		Name:        app.Name,
+		RequireGPU:  app.RequireGPU,
+		Description: app.Description,
+		DockerImage: app.DockerImage,
+		Arguments:   app.Arguments,
+		OpenPorts:   openports,
+		CreatedAt:   app.CreatedAt,
+		UpdatedAt:   app.UpdatedAt,
+	}
 }
 
 func ValidateAppID(id string) error {
