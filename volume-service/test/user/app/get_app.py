@@ -19,6 +19,7 @@ if __name__ == "__main__":
     handle_response(response)
 
     print("앱 정보를 반환합니다.")
-    app_dict=json.loads(response.text)['apps'][0] # make str to dict
+    # print(response.text)
+    app_dict=json.loads(response.text) # make str to dict
     for key in app_dict:
         print(f"{key}: {app_dict[key]}")

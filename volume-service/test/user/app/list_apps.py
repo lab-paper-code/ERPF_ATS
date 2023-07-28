@@ -17,12 +17,9 @@ if __name__ == "__main__":
     handle_response(response)
     
     print("앱 목록을 반환합니다.")
-    print(response.text)
-    '''
     apps_list=json.loads(response.text)['apps']
     for app_dict in apps_list:
         for key in app_dict:
             print(f"{key}: {app_dict[key]}")
         print()
-    '''
     

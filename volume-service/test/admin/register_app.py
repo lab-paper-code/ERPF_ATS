@@ -1,4 +1,4 @@
-import requests, json, sys, array
+import requests, json, sys
 
 with open('./test/conf.json','r') as conf:
     config = json.load(conf)
@@ -24,8 +24,10 @@ if __name__ == "__main__":
     requiregpu=False
     print("앱 등록을 위한 정보를 받습니다.")
     name=input("앱 이름을 입력하세요: ")
-    requiregpu=bool(input("GPU 요청여부를 입력하세요(사용:True, 사용하지 않음:False).\n입력하지 않으면 False으로 처리됩니다: "))
-    if requiregpu!=True:
+    requiregpu=input("GPU 요청여부를 입력하세요(사용:True 사용 X: False).\n입력하지 않으면 False으로 처리됩니다: ")
+    if (requiregpu=="True" or requiregpu=="true"):
+        requiregpu=True
+    else:
         requiregpu=False
     description=input("Description을 입력하세요. 입력하지 않으면 공백으로 처리됩니다: ")
     dockerimage=input("사용할 도커 이미지를 입력하세요: ")
@@ -34,7 +36,8 @@ if __name__ == "__main__":
     if len(openports_str) >= 2:
         openports_list=openports_str.split(',')
         openports=[int(port) for port in openports_list]
-        
+    else:
+        openports=list(openports_str)
     response = register_app(serverurl, name, requiregpu, description, dockerimage, arguments, openports, id, password)
     
     handle_response(response)

@@ -6,13 +6,13 @@ sys.path.append(config['sys_path']) # path for utils.py
 
 from utils import device_login, handle_response
 
-def execute_apprun(Serv_url, AppId, VolumeID, DeviceID, PASSWD):
-    Serv_url=Serv_url+AppId
+def execute_apprun(Serv_url, appID, volumeID, deviceID, password):
+    Serv_url=Serv_url+appID
     data = {
-        'device_id': DeviceID,
-        'volume_id': VolumeID
+        'device_id': deviceID,
+        'volume_id': volumeID
     }
-    response = requests.post(Serv_url, json=data, auth=(DeviceID, PASSWD)) # post request
+    response = requests.post(Serv_url, json=data, auth=(deviceID, password)) # post request
     return response
 
 if __name__ == "__main__":
