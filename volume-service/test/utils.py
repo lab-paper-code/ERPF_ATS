@@ -8,7 +8,7 @@ def admin_login():
 
 def device_login(): 
     id=input("Device ID: ")
-    passwd=input("Password: ")
+    passwd=getpass.getpass("Password: ")
     print()
     return id, passwd
 
