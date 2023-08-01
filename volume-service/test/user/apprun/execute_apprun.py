@@ -2,7 +2,7 @@ import requests, json, sys
 
 with open('./test/conf.json','r') as conf:
     config = json.load(conf)
-sys.path.append(config['sys_path']) # path for utils.py
+sys.path.append(config['sys_path'])
 
 from utils import device_login, handle_response
 
@@ -12,7 +12,7 @@ def execute_apprun(Serv_url, appID, volumeID, deviceID, password):
         'device_id': deviceID,
         'volume_id': volumeID
     }
-    response = requests.post(Serv_url, json=data, auth=(deviceID, password)) # post request
+    response = requests.post(Serv_url, json=data, auth=(deviceID, password))
     return response
 
 if __name__ == "__main__":

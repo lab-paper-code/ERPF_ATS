@@ -352,18 +352,20 @@ func (adapter *RESTAdapter) handleTerminateAppRun(c *gin.Context) {
 		return
 	}
 
-	type appRunTerminationRequest struct {
-	}
+	/*
+		type appRunTerminationRequest struct {
+		}
 
-	var input appRunTerminationRequest
+		var input appRunTerminationRequest
 
-	err = c.BindJSON(&input)
-	if err != nil {
-		// fail
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+		err = c.BindJSON(&input)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	*/
 
 	appRun, err := adapter.logic.GetAppRun(appRunID)
 	if err != nil {

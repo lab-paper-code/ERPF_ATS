@@ -137,7 +137,7 @@ func (logic *Logic) UnmountVolume(volumeID string) error {
 	if logic.config.NoKubernetes {
 		logger.Debug("bypass k8sAdapter.CreateWebdav()")
 	} else {
-		// alrady unmounted
+		// already unmounted
 		if !volume.Mounted {
 			logic.k8sAdapter.EnsureDeleteWebdav(volumeID)
 			return nil

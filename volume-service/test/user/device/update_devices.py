@@ -2,7 +2,7 @@ import requests, json, sys
 
 with open('./test/conf.json','r') as conf:
     config = json.load(conf)
-sys.path.append(config['sys_path']) # path for utils.py
+sys.path.append(config['sys_path'])
 
 from utils import device_login, handle_response
 
@@ -12,7 +12,7 @@ def update_volume(Serv_url, deviceIP, devicePasswordMod, deviceID, PASSWD):
         'ip': deviceIP,
         'password': devicePasswordMod
     }
-    response = requests.patch(Serv_url, json=data, auth=(deviceID, PASSWD)) # post request
+    response = requests.patch(Serv_url, json=data, auth=(deviceID, PASSWD))
     return response
 
 if __name__ == "__main__":
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     dev_pw_mod=input("변경할 디바이스 패스워드를 입력하세요: ")
     response = update_volume(Serverurl, dev_ip, dev_pw_mod, dev_id, dev_pw)
     
-    if response.status_code != 401:
-        handle_response(response)
-    else:
-        print("인증 오류: 다른 디바이스의 정보를 업데이트할 수 없습니다.")
+    if response.status_code == 401: pass           # unauthorized error, print error message from server
+    else:                                          
+        handle_response(response) 
+        
