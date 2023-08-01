@@ -74,6 +74,7 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 	containerPorts := []apiv1.ContainerPort{}
 	for _, port := range app.OpenPorts {
 		containerPorts = append(containerPorts, apiv1.ContainerPort{
+			Name:          fmt.Sprintf("container-port-%d", port),
 			ContainerPort: int32(port),
 		})
 	}
@@ -237,6 +238,7 @@ func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun
 	servicePorts := []apiv1.ServicePort{}
 	for _, port := range app.OpenPorts {
 		servicePorts = append(servicePorts, apiv1.ServicePort{
+			Name:     fmt.Sprintf("service-port-%d", port),
 			Port:     int32(port),
 			Protocol: apiv1.ProtocolTCP,
 		})
