@@ -3,6 +3,8 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -25,16 +27,25 @@ const (
 	webdavContainerPVMountPath string = "/uploads"
 )
 
-func (adapter *K8SAdapter) GetWebdavDeploymentName(volumdID string) string {
-	return fmt.Sprintf("%s_%s", webdavDeploymentNamePrefix, volumdID)
+func (adapter *K8SAdapter) GetWebdavDeploymentName(volumeID string) string {
+	volumeID = strings.ToLower(volumeID)
+	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
+	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
+	return fmt.Sprintf("%s-%s", webdavDeploymentNamePrefix, validSubdomain)
 }
 
 func (adapter *K8SAdapter) GetWebdavServiceName(volumeID string) string {
-	return fmt.Sprintf("%s_%s", webdavServiceNamePrefix, volumeID)
+	volumeID = strings.ToLower(volumeID)
+	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
+	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
+	return fmt.Sprintf("%s-%s", webdavServiceNamePrefix, validSubdomain)
 }
 
 func (adapter *K8SAdapter) GetWebdavIngressName(volumeID string) string {
-	return fmt.Sprintf("%s_%s", webdavIngressNamePrefix, volumeID)
+	volumeID = strings.ToLower(volumeID)
+	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
+	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
+	return fmt.Sprintf("%s-%s", webdavIngressNamePrefix, validSubdomain)
 }
 
 func (adapter *K8SAdapter) getWebdavDeploymentLabels(volume *types.Volume) map[string]string {
@@ -66,6 +77,10 @@ func (adapter *K8SAdapter) GetWebdavIngressPath(volumeID string) string {
 }
 
 func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *types.Volume) []apiv1.Container {
+	webdavPVMountPath := webdavContainerPVMountPath
+	if len(volume.MountPath) != 0 { // add MountPath input from user
+		webdavPVMountPath = volume.MountPath
+	}
 	return []apiv1.Container{
 		{
 			Name:  "webdav",
@@ -100,7 +115,7 @@ func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *typ
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      webdavContainerVolumeName,
-					MountPath: webdavContainerPVMountPath,
+					MountPath: webdavPVMountPath,
 				},
 			},
 			Env: []apiv1.EnvVar{
@@ -114,11 +129,11 @@ func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *typ
 				},
 				{
 					Name:  "WEBDAV_USERNAME",
-					Value: device.ID, // TODO: Need to pass this through secrets
+					Value: device.ID, // js TODO: Need to pass this through secrets
 				},
 				{
 					Name:  "WEBDAV_PASSWORD",
-					Value: device.Password, // TODO: Need to pass this through secrets
+					Value: device.Password, // js TODO: Need to pass this through secrets
 				},
 			},
 		},

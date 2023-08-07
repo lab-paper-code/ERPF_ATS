@@ -286,21 +286,19 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 		return
 	}
 
-	/*
-		type volumeMountRequest struct {
-			// define input required
-		}
+	type volumeMountRequest struct {
+		MountPath string `json:"mount_path,omitempty"`
+	}
 
-		var input volumeMountRequest
+	var input volumeMountRequest
 
-		err = c.BindJSON(&input)
-		if err != nil {
-			// fail
-			logger.Error(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-	*/
+	err = c.BindJSON(&input)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	volume, err := adapter.logic.GetVolume(volumeID)
 	if err != nil {
@@ -350,21 +348,21 @@ func (adapter *RESTAdapter) handleUnmountVolume(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	/*
+		type volumeUnmountRequest struct {
+			// define input required
+		}
 
-	type volumeUnmountRequest struct {
-		// define input required
-	}
+		var input volumeUnmountRequest
 
-	var input volumeUnmountRequest
-
-	err = c.BindJSON(&input)
-	if err != nil {
-		// fail
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
+		err = c.BindJSON(&input)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	*/
 	volume, err := adapter.logic.GetVolume(volumeID)
 	if err != nil {
 		// fail

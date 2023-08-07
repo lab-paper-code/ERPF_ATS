@@ -23,7 +23,7 @@ func (adapter *K8SAdapter) GetStorageClassName() string {
 	return storageClassName
 }
 
-func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string { // modified to avoid kubernetes error
+func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string { // changed to avoid kubernetes error
 	volumeID = strings.ToLower(volumeID)
 	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
 	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes

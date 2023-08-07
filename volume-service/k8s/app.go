@@ -122,7 +122,7 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      appContainerVolumeName,
-					MountPath: appContainerPVMountPath,
+					MountPath: appContainerPVMountPath, // js TODO: change this to volume.MountPath
 				},
 			},
 		},

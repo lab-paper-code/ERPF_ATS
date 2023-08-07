@@ -117,7 +117,7 @@ func (logic *Logic) MountVolume(volumeID string) error {
 		}
 	}
 
-	return logic.dbAdapter.UpdateVolumeMount(volumeID, true)
+	return logic.dbAdapter.UpdateVolumeMount(volumeID, true, volume.MountPath)
 }
 
 func (logic *Logic) UnmountVolume(volumeID string) error {
@@ -150,5 +150,5 @@ func (logic *Logic) UnmountVolume(volumeID string) error {
 		}
 	}
 
-	return logic.dbAdapter.UpdateVolumeMount(volumeID, false)
+	return logic.dbAdapter.UpdateVolumeMount(volumeID, false, volume.MountPath)
 }

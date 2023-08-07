@@ -19,6 +19,7 @@ type Volume struct {
 	DeviceID   string    `json:"device_id"`
 	VolumeSize int64     `json:"volume_size"` // in bytes
 	Mounted    bool      `json:"mounted"`
+	MountPath  string    `json:"mount_path,omitempty"`
 	CreatedAt  time.Time `json:"created_at,omitempty"`
 	UpdatedAt  time.Time `json:"updated_at,omitempty"`
 }
