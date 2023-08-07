@@ -317,6 +317,14 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 		return
 	}
 
+	if len(input.MountPath) == 0 {
+		// no Mountpath -> default path("/uploads")
+		volume.MountPath = "/uploads"
+	} else {
+		// set MountPath
+		volume.MountPath = input.MountPath
+	}
+
 	logger.Debugf("Mounting Volume ID: %s", volumeID)
 
 	err = adapter.logic.MountVolume(volumeID)
