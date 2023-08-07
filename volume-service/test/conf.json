@@ -1,5 +1,5 @@
 {
-    "sys_path": "/home/palisade1/Desktop/ksv/volume-service/test",
+    "sys_path": "/home/dom/jsbyeon/ksv/volume-service/test",
 
     "apps": ["http://155.230.36.27:31200/apps", "http://155.230.36.27:31200/apps/"],
     "appruns":["http://155.230.36.27:31200/appruns", "http://155.230.36.27:31200/appruns/"],

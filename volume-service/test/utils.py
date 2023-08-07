@@ -8,7 +8,7 @@ def client_input(prompt):                               # client_input is input 
     return user_input
 
 def server_print(*args, sep=' ', end='\n'):             # server_print is print function with prefix([Client])
-    message = server_prefix + sep.join(map(str, args)) + end
+    message = server_prefix + ' ' + sep.join(map(str, args)) + end
     print(message, end='')
 
 def admin_login():

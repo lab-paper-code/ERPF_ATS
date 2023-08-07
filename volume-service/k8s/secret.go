@@ -42,7 +42,7 @@ func (adapter *K8SAdapter) CreateSecret(device *types.Device) error {
 	secretName := adapter.GetSecretName(device)
 	secretLabels := adapter.getSecretLabels(device)
 
-	// Secret 생성
+	// create secret
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,

@@ -25,7 +25,8 @@ if __name__ == "__main__":
 
     server_print("디바이스 등록을 위한 정보를 받습니다.")
     ip=client_input("IP를 입력하세요. 생략 시 요청을 보낸 IP를 입력합니다: ")
-    password=getpass.getpass(client_prefix, "Password를 입력하세요: ")
+
+    password=getpass.getpass("[Client] Password를 입력하세요: ")
     description=client_input("디바이스에 대한 설명을 입력하세요. 생략 시 공백으로 처리됩니다: ")
     response = register_device(serverurl, ip, password, description, ID, PASSWORD)
     
@@ -48,6 +49,6 @@ if __name__ == "__main__":
                 server_print(f"{'device-id'}: {dev_dict[key]}") # change to normal print if needed
             else:
                 server_print(f"{key}: {dev_dict[key]}")
+        print()
     else:                                                   # already admin -> other error occured
         handle_response(response2)
-        exit()

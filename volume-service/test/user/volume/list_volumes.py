@@ -22,7 +22,8 @@ if __name__ == "__main__":
             for key in vol_dict:
                 if key == "id":
                     server_print(f"{'volume-id'}: {vol_dict[key]}")
-                server_print(f"{key}: {vol_dict[key]}")
+                else:
+                    server_print(f"{key}: {vol_dict[key]}")
             print()
-    else:
+    else:                                               # error occurrred
         handle_response(response)

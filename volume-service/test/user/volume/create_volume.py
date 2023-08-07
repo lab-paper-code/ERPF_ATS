@@ -23,6 +23,7 @@ if __name__ == "__main__":
     response = register_volume(Serverurl, dev_id, volumesize, dev_pw)
 
     if response.status_code == 200:     # worked properly
-        print("볼륨이 정상적으로 생성되었습니다.")
+        server_print("볼륨이 정상적으로 생성되었습니다.")
+        print()
     else:                               # error occurred
         handle_response(response)
