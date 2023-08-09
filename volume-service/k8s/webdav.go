@@ -3,8 +3,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -28,24 +26,15 @@ const (
 )
 
 func (adapter *K8SAdapter) GetWebdavDeploymentName(volumeID string) string {
-	volumeID = strings.ToLower(volumeID)
-	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
-	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
-	return fmt.Sprintf("%s-%s", webdavDeploymentNamePrefix, validSubdomain)
+	return makeValidObjectName(webdavDeploymentNamePrefix, volumeID)
 }
 
 func (adapter *K8SAdapter) GetWebdavServiceName(volumeID string) string {
-	volumeID = strings.ToLower(volumeID)
-	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
-	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
-	return fmt.Sprintf("%s-%s", webdavServiceNamePrefix, validSubdomain)
+	return makeValidObjectName(webdavServiceNamePrefix, volumeID)
 }
 
 func (adapter *K8SAdapter) GetWebdavIngressName(volumeID string) string {
-	volumeID = strings.ToLower(volumeID)
-	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
-	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
-	return fmt.Sprintf("%s-%s", webdavIngressNamePrefix, validSubdomain)
+	return makeValidObjectName(webdavIngressNamePrefix, volumeID)
 }
 
 func (adapter *K8SAdapter) getWebdavDeploymentLabels(volume *types.Volume) map[string]string {

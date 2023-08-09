@@ -3,8 +3,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -27,24 +25,15 @@ const (
 )
 
 func (adapter *K8SAdapter) GetAppDeploymentName(appRunID string) string {
-	appRunID = strings.ToLower(appRunID)
-	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(appRunID, "-") // change other patterns with hyphen(-)
-	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
-	return fmt.Sprintf("%s-%s", appDeploymentNamePrefix, validSubdomain)
+	return makeValidObjectName(appDeploymentNamePrefix, appRunID)
 }
 
 func (adapter *K8SAdapter) GetAppServiceName(appRunID string) string {
-	appRunID = strings.ToLower(appRunID)
-	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(appRunID, "-") // change other patterns with hyphen(-)
-	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
-	return fmt.Sprintf("%s-%s", appServiceNamePrefix, validSubdomain)
+	return makeValidObjectName(appServiceNamePrefix, appRunID)
 }
 
 func (adapter *K8SAdapter) GetAppIngressName(appRunID string) string {
-	appRunID = strings.ToLower(appRunID)
-	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(appRunID, "-") // change other patterns with hyphen(-)
-	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
-	return fmt.Sprintf("%s-%s", appIngressNamePrefix, validSubdomain)
+	return makeValidObjectName(appIngressNamePrefix, appRunID)
 }
 
 func (adapter *K8SAdapter) getAppDeploymentLabels(appRun *types.AppRun) map[string]string {
