@@ -324,10 +324,9 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 		// set MountPath
 		volume.MountPath = input.MountPath
 	}
-
 	logger.Debugf("Mounting Volume ID: %s", volumeID)
 
-	err = adapter.logic.MountVolume(volumeID)
+	err = adapter.logic.MountVolume(volumeID, volume.MountPath)
 	if err != nil {
 		// fail
 		logger.Error(err)

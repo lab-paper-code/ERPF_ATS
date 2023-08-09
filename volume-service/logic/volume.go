@@ -83,7 +83,7 @@ func (logic *Logic) ResizeVolume(volumeID string, size int64) error {
 	return logic.dbAdapter.UpdateVolumeSize(volumeID, size)
 }
 
-func (logic *Logic) MountVolume(volumeID string) error {
+func (logic *Logic) MountVolume(volumeID string, mountPath string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
@@ -100,6 +100,14 @@ func (logic *Logic) MountVolume(volumeID string) error {
 	// already mounted
 	if volume.Mounted {
 		return nil
+	}
+
+	// already has MountPath
+	if volume.MountPath != "" {
+		return nil
+	} else {
+		// else get MountPath
+		volume.MountPath = mountPath
 	}
 
 	device, err := logic.dbAdapter.GetDevice(volume.DeviceID)
