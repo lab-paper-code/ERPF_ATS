@@ -67,9 +67,7 @@ func (adapter *K8SAdapter) GetWebdavIngressPath(volumeID string) string {
 
 func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *types.Volume) []apiv1.Container {
 	webdavPVMountPath := webdavContainerPVMountPath
-	if len(volume.MountPath) != 0 { // add MountPath input from user
-		webdavPVMountPath = volume.MountPath
-	}
+
 	return []apiv1.Container{
 		{
 			Name:  "webdav",

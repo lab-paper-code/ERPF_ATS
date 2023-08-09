@@ -286,19 +286,20 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 		return
 	}
 
-	type volumeMountRequest struct {
-		MountPath string `json:"mount_path,omitempty"`
-	}
+	/*
+		type volumeMountRequest struct {
+		}
 
-	var input volumeMountRequest
+		var input volumeMountRequest
 
-	err = c.BindJSON(&input)
-	if err != nil {
-		// fail
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+		err = c.BindJSON(&input)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	*/
 
 	volume, err := adapter.logic.GetVolume(volumeID)
 	if err != nil {
