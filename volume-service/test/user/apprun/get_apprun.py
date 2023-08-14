@@ -20,7 +20,7 @@ if __name__ == "__main__":
     
 
     if response.status_code == 200:         # worked properly
-        server_print("앱 실행정보를 반환합니다.")
+        server_print("앱 배포 정보를 반환합니다.")
         apprun_dict=json.loads(response.text)
         for key in apprun_dict:
             if key == "id":

@@ -115,12 +115,22 @@ func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *typ
 					Value: "info",
 				},
 				{
-					Name:  "WEBDAV_USERNAME",
-					Value: device.ID, // js TODO: Need to pass this through secrets
+					Name: "WEBDAV_USERNAME",
+					ValueFrom: &apiv1.EnvVarSource{
+						SecretKeyRef: &apiv1.SecretKeySelector{
+							LocalObjectReference: apiv1.LocalObjectReference{Name: adapter.GetSecretName(device)},
+							Key:                  "username",
+						},
+					},
 				},
 				{
-					Name:  "WEBDAV_PASSWORD",
-					Value: device.Password, // js TODO: Need to pass this through secrets
+					Name: "WEBDAV_PASSWORD",
+					ValueFrom: &apiv1.EnvVarSource{
+						SecretKeyRef: &apiv1.SecretKeySelector{
+							LocalObjectReference: apiv1.LocalObjectReference{Name: adapter.GetSecretName(device)},
+							Key:                  "password",
+						},
+					},
 				},
 			},
 		},

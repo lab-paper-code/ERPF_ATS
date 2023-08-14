@@ -111,7 +111,7 @@ func (adapter *K8SAdapter) ResizeVolume(volumeID string, size int64) error {
 		return err
 	}
 
-	// TODO: double check if this works
+	// TODO: double check if this works -> not working, figuring out how to fix this
 	pvc.Spec.Resources.Requests.Storage().Set(size)
 
 	_, updateErr := pvcclient.Update(ctx, pvc, metav1.UpdateOptions{})

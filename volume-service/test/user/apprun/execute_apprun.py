@@ -19,7 +19,7 @@ if __name__ == "__main__":
     dev_id, dev_pw = device_login()
     Serverurl = config['appruns'][1]
     
-    server_print("앱 실행을 위한 정보를 받습니다.")
+    server_print("앱 배포를 위한 정보를 받습니다.")
     app_id = client_input("사용할 앱 id를 입력하세요: ")
     vol_id=client_input("사용할 볼륨 id를 입력하세요: ")
     response = execute_apprun(Serverurl, app_id, vol_id, dev_id, dev_pw)

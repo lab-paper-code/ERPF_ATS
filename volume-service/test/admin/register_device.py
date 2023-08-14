@@ -30,13 +30,13 @@ if __name__ == "__main__":
     description=client_input("디바이스에 대한 설명을 입력하세요. 생략 시 공백으로 처리됩니다: ")
     response = register_device(serverurl, ip, password, description, ID, PASSWORD)
     
-    if response.status_code == 200:
+    if response.status_code == 200:                         # work properly
         server_print("디바이스가 정상적으로 등록되었습니다.")
-                                 # non-admin user request device register
-    elif response.status_code == 401:                       # work properly
+                                 
+    elif response.status_code == 401:                       # non-admin user request device register
         server_print("디바이스 등록은 admin 계정에서만 가능합니다.")       
-    else:
-        handle_response(response)                           # other error occured
+    else:                                                   # other error occured
+        handle_response(response)                           
         
     response2 = list_devices(serverurl, ID, PASSWORD)       # return registered deviceID
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         dev_dict=json.loads(response2.text)['devices'][-1]  # get most recent device
         for key in ['id', 'ip', 'description']:
             if key == "id":
-                server_print(f"{'device-id'}: {dev_dict[key]}") # change to normal print if needed
+                server_print(f"{'device-id'}: {dev_dict[key]}") 
             else:
                 server_print(f"{key}: {dev_dict[key]}")
         print()
