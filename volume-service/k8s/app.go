@@ -9,6 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -78,6 +79,11 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 			ContainerPort: int32(port),
 		})
 	}
+	gpuFlag := "0"
+	// set to 1 if app requires GPU
+	if app.RequireGPU {
+		gpuFlag = "1"
+	}
 
 	return []apiv1.Container{
 		{
@@ -111,7 +117,12 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      appContainerVolumeName,
-					MountPath: appContainerPVMountPath, // js TODO: change this to volume.MountPath
+					MountPath: appContainerPVMountPath,
+				},
+			},
+			Resources: apiv1.ResourceRequirements{
+				Limits: apiv1.ResourceList{
+					"nvidia.com/gpu": resource.MustParse(gpuFlag),
 				},
 			},
 		},

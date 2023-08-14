@@ -16,7 +16,7 @@ if __name__ == "__main__":
     response = list_appruns(serverurl, ID, PASSWORD)
     
     if response.status_code == 200:         # worked properly
-        server_print("앱 실행정보 목록을 반환합니다.\n")
+        server_print("앱 배포 정보 목록을 반환합니다.\n")
         appruns_list=json.loads(response.text)['app_runs']
         for apprun_dict in appruns_list:
             for key in apprun_dict:

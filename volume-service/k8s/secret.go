@@ -45,7 +45,7 @@ func (adapter *K8SAdapter) CreateSecret(device *types.Device) error {
 			Namespace: secretNamespace,
 		},
 		Data: map[string][]byte{
-			"id":       []byte(device.ID),
+			"username": []byte(device.ID),
 			"password": []byte(device.Password),
 		},
 	}

@@ -102,14 +102,6 @@ func (logic *Logic) MountVolume(volumeID string, mountPath string) error {
 		return nil
 	}
 
-	// already has MountPath
-	if volume.MountPath != "" {
-		return nil
-	} else {
-		// else get MountPath
-		volume.MountPath = mountPath
-	}
-
 	device, err := logic.dbAdapter.GetDevice(volume.DeviceID)
 	if err != nil {
 		return err
