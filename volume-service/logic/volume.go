@@ -83,7 +83,7 @@ func (logic *Logic) ResizeVolume(volumeID string, size int64) error {
 	return logic.dbAdapter.UpdateVolumeSize(volumeID, size)
 }
 
-func (logic *Logic) MountVolume(volumeID string, mountPath string) error {
+func (logic *Logic) MountVolume(volumeID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
 		"struct":   "Logic",
