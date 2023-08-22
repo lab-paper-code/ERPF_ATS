@@ -12,14 +12,14 @@ import (
 // setupAppRouter setup http request router for app
 func (adapter *RESTAdapter) setupAppRouter() {
 	// any devices can call these APIs
-	adapter.router.GET("/apps", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListApps)
-	adapter.router.GET("/apps/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetApp)
-	adapter.router.POST("/apps", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleCreateApp)
+	adapter.router.GET("/apps", adapter.basicAuthDeviceOrAdmin, adapter.handleListApps)
+	adapter.router.GET("/apps/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetApp)
+	adapter.router.POST("/apps", adapter.basicAuthDeviceOrAdmin, adapter.handleCreateApp)
 
-	adapter.router.GET("/appruns", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListAppRuns)
-	adapter.router.POST("/appruns/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleExecuteApp)
-	adapter.router.GET("/appruns/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetAppRun)
-	adapter.router.DELETE("/appruns/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleTerminateAppRun)
+	adapter.router.GET("/appruns", adapter.basicAuthDeviceOrAdmin, adapter.handleListAppRuns)
+	adapter.router.POST("/appruns/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleExecuteApp)
+	adapter.router.GET("/appruns/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetAppRun)
+	adapter.router.DELETE("/appruns/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleTerminateAppRun)
 }
 
 func (adapter *RESTAdapter) handleListApps(c *gin.Context) {
@@ -352,18 +352,20 @@ func (adapter *RESTAdapter) handleTerminateAppRun(c *gin.Context) {
 		return
 	}
 
-	type appRunTerminationRequest struct {
-	}
+	/*
+		type appRunTerminationRequest struct {
+		}
 
-	var input appRunTerminationRequest
+		var input appRunTerminationRequest
 
-	err = c.BindJSON(&input)
-	if err != nil {
-		// fail
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+		err = c.BindJSON(&input)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	*/
 
 	appRun, err := adapter.logic.GetAppRun(appRunID)
 	if err != nil {

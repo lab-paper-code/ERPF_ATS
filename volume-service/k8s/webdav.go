@@ -25,16 +25,16 @@ const (
 	webdavContainerPVMountPath string = "/uploads"
 )
 
-func (adapter *K8SAdapter) GetWebdavDeploymentName(volumdID string) string {
-	return fmt.Sprintf("%s_%s", webdavDeploymentNamePrefix, volumdID)
+func (adapter *K8SAdapter) GetWebdavDeploymentName(volumeID string) string {
+	return makeValidObjectName(webdavDeploymentNamePrefix, volumeID)
 }
 
 func (adapter *K8SAdapter) GetWebdavServiceName(volumeID string) string {
-	return fmt.Sprintf("%s_%s", webdavServiceNamePrefix, volumeID)
+	return makeValidObjectName(webdavServiceNamePrefix, volumeID)
 }
 
 func (adapter *K8SAdapter) GetWebdavIngressName(volumeID string) string {
-	return fmt.Sprintf("%s_%s", webdavIngressNamePrefix, volumeID)
+	return makeValidObjectName(webdavIngressNamePrefix, volumeID)
 }
 
 func (adapter *K8SAdapter) getWebdavDeploymentLabels(volume *types.Volume) map[string]string {
@@ -66,6 +66,8 @@ func (adapter *K8SAdapter) GetWebdavIngressPath(volumeID string) string {
 }
 
 func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *types.Volume) []apiv1.Container {
+	webdavPVMountPath := webdavContainerPVMountPath
+
 	return []apiv1.Container{
 		{
 			Name:  "webdav",
@@ -100,7 +102,7 @@ func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *typ
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      webdavContainerVolumeName,
-					MountPath: webdavContainerPVMountPath,
+					MountPath: webdavPVMountPath,
 				},
 			},
 			Env: []apiv1.EnvVar{
@@ -113,12 +115,22 @@ func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *typ
 					Value: "info",
 				},
 				{
-					Name:  "WEBDAV_USERNAME",
-					Value: device.ID, // TODO: Need to pass this through secrets
+					Name: "WEBDAV_USERNAME",
+					ValueFrom: &apiv1.EnvVarSource{
+						SecretKeyRef: &apiv1.SecretKeySelector{
+							LocalObjectReference: apiv1.LocalObjectReference{Name: adapter.GetSecretName(device)},
+							Key:                  "username",
+						},
+					},
 				},
 				{
-					Name:  "WEBDAV_PASSWORD",
-					Value: device.Password, // TODO: Need to pass this through secrets
+					Name: "WEBDAV_PASSWORD",
+					ValueFrom: &apiv1.EnvVarSource{
+						SecretKeyRef: &apiv1.SecretKeySelector{
+							LocalObjectReference: apiv1.LocalObjectReference{Name: adapter.GetSecretName(device)},
+							Key:                  "password",
+						},
+					},
 				},
 			},
 		},

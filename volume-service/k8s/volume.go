@@ -2,9 +2,6 @@ package k8s
 
 import (
 	"context"
-	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -23,11 +20,8 @@ func (adapter *K8SAdapter) GetStorageClassName() string {
 	return storageClassName
 }
 
-func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string { // modified to avoid kubernetes error
-	volumeID = strings.ToLower(volumeID)
-	validSubdomain := regexp.MustCompile(`[^a-z0-9\-]+`).ReplaceAllString(volumeID, "-") // change other patterns with hyphen(-)
-	validSubdomain = strings.TrimSuffix(strings.TrimPrefix(validSubdomain, "-"), "-")    // trim leading or trailing dashes
-	return fmt.Sprintf("%s-%s", volumeClaimNamePrefix, validSubdomain)
+func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string { // changed to avoid kubernetes error
+	return makeValidObjectName(volumeClaimNamePrefix, volumeID)
 }
 
 func (adapter *K8SAdapter) getVolumeLabels(volume *types.Volume) map[string]string {
@@ -117,7 +111,7 @@ func (adapter *K8SAdapter) ResizeVolume(volumeID string, size int64) error {
 		return err
 	}
 
-	// TODO: double check if this works
+	// TODO: double check if this works -> not working, figuring out how to fix this
 	pvc.Spec.Resources.Requests.Storage().Set(size)
 
 	_, updateErr := pvcclient.Update(ctx, pvc, metav1.UpdateOptions{})

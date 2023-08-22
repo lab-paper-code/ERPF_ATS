@@ -16,13 +16,13 @@ const (
 // setupVolumeRouter setup http request router for volume
 func (adapter *RESTAdapter) setupVolumeRouter() {
 	// any devices can call these APIs
-	adapter.router.GET("/volumes", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleListVolumes)
-	adapter.router.GET("/volumes/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleGetVolume)
-	adapter.router.POST("/volumes", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleCreateVolume)
-	adapter.router.PATCH("/volumes/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUpdateVolume)
+	adapter.router.GET("/volumes", adapter.basicAuthDeviceOrAdmin, adapter.handleListVolumes)
+	adapter.router.GET("/volumes/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetVolume)
+	adapter.router.POST("/volumes", adapter.basicAuthDeviceOrAdmin, adapter.handleCreateVolume)
+	adapter.router.PATCH("/volumes/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUpdateVolume)
 
-	adapter.router.POST("/mounts/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleMountVolume)
-	adapter.router.DELETE("/mounts/:id", gin.BasicAuth(adapter.getDeviceAccounts()), adapter.handleUnmountVolume)
+	adapter.router.POST("/mounts/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleMountVolume)
+	adapter.router.DELETE("/mounts/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUnmountVolume)
 }
 
 func (adapter *RESTAdapter) handleListVolumes(c *gin.Context) {
@@ -286,19 +286,20 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 		return
 	}
 
-	type volumeMountRequest struct {
-		// define input required
-	}
+	/*
+		type volumeMountRequest struct {
+		}
 
-	var input volumeMountRequest
+		var input volumeMountRequest
 
-	err = c.BindJSON(&input)
-	if err != nil {
-		// fail
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+		err = c.BindJSON(&input)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	*/
 
 	volume, err := adapter.logic.GetVolume(volumeID)
 	if err != nil {
@@ -348,21 +349,21 @@ func (adapter *RESTAdapter) handleUnmountVolume(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	/*
+		type volumeUnmountRequest struct {
+			// define input required
+		}
 
-	type volumeUnmountRequest struct {
-		// define input required
-	}
+		var input volumeUnmountRequest
 
-	var input volumeUnmountRequest
-
-	err = c.BindJSON(&input)
-	if err != nil {
-		// fail
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
+		err = c.BindJSON(&input)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	*/
 	volume, err := adapter.logic.GetVolume(volumeID)
 	if err != nil {
 		// fail
