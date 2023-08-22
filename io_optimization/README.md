@@ -20,6 +20,7 @@ sh setup.sh
 4. Python 3의 가상 환경 생성 및 `requirements.txt`에 포함된 모듈 설치
 
 ### 2. Fine-tuning workload 실행
+#### 2-1. JPEG Samples로 학습
 `scripts/image_fine-tuning.py` 스크립트를 실행한다.
 
 ```shell
@@ -39,6 +40,20 @@ python3 scripts/image_fine-tuning.py
 ```shell
 python3 scripts/image_fine-tuning.py --epochs=5 --base_model=imagenet
 ```
+
+#### 2-2. TFRecords로 학습
+`scripts/tfrecord_converter.py` 스크립트를 사용하면, 여러 샘플을 특정 크기의 TFRecords로 변환하여 저장할 수 있다.
+
+```shell
+python3 scripts/tfrecord-converter.py
+```
+
+적용할 수 있는 옵션은 다음과 같다.
+* `--dataset_path`: 데이터셋이 존재하는 위치. 디폴트 값은 `images`이다.
+* `--size_per_record`: 한 TFRecords의 크기 (Bytes), 디폴트 값은 52428800 (5MB)이다.
+* `--output_path`: TFRecords 파일을 저장할 디렉토리. 디폴트 값은 `tfrecords`이며, 디렉토리가 존재하지 않는 경우에는 생성한다.
+
+변환한 TFRecord 파일로 학습할 때에는 `scripts/tfrecord_fine-tuning.py` 스크립트를 사용한다. 사용 방법은 `scripts/image_fine-tuning.py`과 같다.
 
 ## 3. Profiling Result 확인
 **스크립트 실행 시 `--log_path`를 설정했을 때에만 확인 가능**  
