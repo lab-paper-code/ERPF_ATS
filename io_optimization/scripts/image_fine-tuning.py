@@ -10,6 +10,9 @@ import tensorflow.keras.preprocessing as preprocessing
 
 from keras.callbacks import ModelCheckpoint
 
+import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 def get_args(argv: list) -> dict:
     arg_parser = re.compile(r'--(?P<option_name>[a-zA-Z_]+)=(?P<value>[\S]+)')
     valid_options = [
@@ -27,6 +30,7 @@ def get_args(argv: list) -> dict:
         'dataset_size': 50000,
         'batch_size': 32,
         'epochs': 1,
+        'base_model': None
     }
 
     for arg in argv:
@@ -73,7 +77,7 @@ def set_callbacks(settings:dict) -> list:
 
         profile = tf.keras.callbacks.TensorBoard(
             log_dir=settings['log_path'],
-            histogram_freq = 1,
+            histogram_freq=1,
             profile_batch=[start_step, end_step]
         )
         callbacks.append(profile)
@@ -85,29 +89,39 @@ def main():
     callbacks = set_callbacks(settings)
 
     # Set model
-    if 'base_model' in settings.keys():
-        base_model = MobileNet(weights=settings['base_model'], include_top=False, input_shape=(224, 224, 3))
-        inputs = base_model.input
-        x = base_model.output
-        x = GlobalAveragePooling2D()(x)
-    else:
-        inputs = tf.keras.Input(shape=(224, 224, 3))
-        x = GlobalAveragePooling2D()(inputs)
-    x = Dense(1024, activation='relu')(x)
+    base_model = MobileNet(weights=settings['base_model'], include_top=False, input_shape=(224, 224, 3))
+    base_model.trainable = False
+    inputs = base_model.input
+    x = base_model.output
+    x = GlobalAveragePooling2D()(x)
     predictions = Dense(1000, activation='softmax')(x)
     model = Model(inputs=inputs, outputs=predictions)
     model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
 
-    # Load and preprocess the data
+    # Input pipeline:
+    # Fetch → Preprocessing → Batch → Prefetch → Training
+    '''
     data_gen = preprocessing.image.ImageDataGenerator(rescale=1./255)
 
-    # Fine-tune the model
+    # Fetch + Preprocessing + Batch + Prefetch
     dataset = data_gen.flow_from_directory(
         settings['dataset_path'],
-        batch_size= settings['batch_size'],
+        batch_size=settings['batch_size'],
         class_mode='categorical'
     )
+    '''
 
+    # Fetch + Batch + Prefetch
+    dataset = tf.keras.utils.image_dataset_from_directory(
+      settings['dataset_path'],
+      batch_size=settings['batch_size'],
+      label_mode='categorical',
+      image_size=(224, 224)
+    )
+    normalization_layer = tf.keras.layers.Rescaling(1./127.5, offset=-1)
+    dataset = dataset.map(lambda x, y: (normalization_layer(x), y))
+
+    # Training
     model.fit(
         dataset,
         epochs=settings['epochs'],
