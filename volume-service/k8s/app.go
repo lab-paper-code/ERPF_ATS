@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -85,35 +87,85 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 		gpuFlag = "1"
 	}
 
+	cmdString := app.Commands
+	commands := strings.Split(cmdString, " ")
+
+	argString := app.Arguments
+	arguments := strings.Split(argString, " ")
+
+	// Create a container object
+	container := apiv1.Container{
+		Name:            "app",
+		Image:           app.DockerImage,
+		ImagePullPolicy: "IfNotPresent",
+		Ports:           containerPorts,
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				Name:      appContainerVolumeName,
+				MountPath: appContainerPVMountPath,
+			},
+		},
+		SecurityContext: &apiv1.SecurityContext{
+			Privileged: pointer.Bool(true),
+		},
+	}
+
+	// Conditionally set Command and Args if they are not empty
+	if cmdString != "" {
+		container.Command = commands
+	}
+	if argString != "" {
+		container.Args = arguments
+	}
+
+	// Conditionally set GPU Limits if gpuFlag is not "0"
+	if gpuFlag != "0" {
+		container.Resources = apiv1.ResourceRequirements{
+			Limits: apiv1.ResourceList{
+				"nvidia.com/gpu": resource.MustParse(gpuFlag),
+			},
+		}
+	}
+
+	return []apiv1.Container{container}
+}
+
+/*
+func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device, volume *types.Volume) []apiv1.Container {
+	containerPorts := []apiv1.ContainerPort{}
+	for _, port := range app.OpenPorts {
+		containerPorts = append(containerPorts, apiv1.ContainerPort{
+			Name:          fmt.Sprintf("cont-port-%d", port),
+			ContainerPort: int32(port),
+		})
+	}
+	gpuFlag := "0"
+	// set to 1 if app requires GPU
+	if app.RequireGPU {
+		gpuFlag = "1"
+
+	}
+
+	cmdString := app.Commands
+
+	commands := strings.Split(cmdString, " ")
+	// split commands into slice
+
+	argString := app.Arguments
+	// variable to store app.Arguments
+
+	arguments := strings.Split(argString, " ")
+	// split arguments into slice
+
+
+
 	return []apiv1.Container{
 		{
 			Name:            "app",
 			Image:           app.DockerImage,
 			ImagePullPolicy: "IfNotPresent",
 			Ports:           containerPorts,
-			// uncomment this part if the app supports liveness probe via port 80
-			//LivenessProbe: &apiv1.Probe{
-			//  ProbeHandler: apiv1.ProbeHandler{
-			//      HTTPGet: &apiv1.HTTPGetAction{
-			//          Path: "/",
-			//          Port: intstr.FromInt(80),
-			//      },
-			//  },
-			//  InitialDelaySeconds: 10,
-			//  PeriodSeconds:       10,
-			//  FailureThreshold:    3,
-			//},
-			//ReadinessProbe: &apiv1.Probe{
-			//  ProbeHandler: apiv1.ProbeHandler{
-			//      HTTPGet: &apiv1.HTTPGetAction{
-			//          Path: "/",
-			//          Port: intstr.FromInt(80),
-			//      },
-			//  },
-			//  InitialDelaySeconds: 10,
-			//  PeriodSeconds:       10,
-			//  FailureThreshold:    3,
-			//},
+
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      appContainerVolumeName,
@@ -125,9 +177,19 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 					"nvidia.com/gpu": resource.MustParse(gpuFlag),
 				},
 			},
+			// add command to container
+			Command: commands,
+
+			// add argument to container
+			Args: arguments,
+
+			SecurityContext: &apiv1.SecurityContext{
+				Privileged: pointer.Bool(true),
+			},
 		},
 	}
 }
+*/
 
 func (adapter *K8SAdapter) getAppContainerVolumes(volume *types.Volume) []apiv1.Volume {
 	pvcName := adapter.GetVolumeClaimName(volume.ID)
@@ -264,9 +326,9 @@ func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun
 		Spec: apiv1.ServiceSpec{
 			Ports: servicePorts,
 			Selector: map[string]string{
-				"app": adapter.GetAppDeploymentName(appRun.ID),
+				"app-name": adapter.GetAppDeploymentName(appRun.ID),
 			},
-			Type: apiv1.ServiceTypeClusterIP,
+			Type: apiv1.ServiceTypeNodePort,
 		},
 	}
 
@@ -484,6 +546,49 @@ func (adapter *K8SAdapter) EnsureDeleteApp(appRunID string) {
 	adapter.deleteAppService(appRunID)
 	adapter.deleteAppDeployment(appRunID)
 }
+
+/*
+
+func (adapter *K8SAdapter) sendAppCommand(podName string, command ...string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "sendAppCommand",
+	})
+
+	logger.Debug("received sendAppCommand()")
+
+	args := append([]string{"exec", "-it", podName, "--"}, command...)
+
+	cmd := exec.Command("kubectl", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	return cmd.Run()
+}
+
+func (adapter *K8SAdapter) ExecuteAppCommand(appRunID string) {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "ExecAppCmd",
+	})
+
+	logger.Debug("received ExecuteAppCommand()")
+
+	podName := appRunID // get podName with appRunID
+	command := []string{"bash"}
+
+	err := adapter.sendAppCommand(podName, command...)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Println("Command executed successfully!")
+	}
+
+}
+*/
 
 /*
    //TODO:  k8s resource들 생성한 후
