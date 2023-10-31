@@ -328,7 +328,7 @@ func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun
 			Selector: map[string]string{
 				"app-name": adapter.GetAppDeploymentName(appRun.ID),
 			},
-			Type: apiv1.ServiceTypeNodePort,
+			Type: apiv1.ServiceTypeClusterIP,
 		},
 	}
 
