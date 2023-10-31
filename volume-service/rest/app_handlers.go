@@ -98,6 +98,7 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 		RequireGPU  bool   `json:"require_gpu,omitempty"`
 		Description string `json:"description,omitempty"`
 		DockerImage string `json:"docker_image"`
+		Commands    string `json:"commands,omitempty"`
 		Arguments   string `json:"arguments,omitempty"`
 		OpenPorts   []int  `json:"open_ports,omitempty"`
 	}
@@ -126,6 +127,7 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 		RequireGPU:  input.RequireGPU,
 		Description: input.Description,
 		DockerImage: input.DockerImage,
+		Commands:    input.Commands,
 		Arguments:   input.Arguments,
 		OpenPorts:   input.OpenPorts,
 	}

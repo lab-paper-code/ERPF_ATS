@@ -22,6 +22,7 @@ type App struct {
 	RequireGPU  bool      `json:"require_gpu,omitempty"`
 	Description string    `json:"description,omitempty"`
 	DockerImage string    `json:"docker_image"`
+	Commands    string    `json:"commands,omitempty"`   // a space-separated commands to run app, array/map not supported
 	Arguments   string    `json:"arguments,omitempty"`  // a space-separated command-line arguments to run app, array/map not supported
 	OpenPorts   []int     `json:"open_ports,omitempty"` // first element is the main service port to open with ingress setup
 	CreatedAt   time.Time `json:"created_at,omitempty"`
@@ -35,7 +36,8 @@ type AppSQLiteObj struct {
 	RequireGPU  bool      `json:"require_gpu,omitempty"`
 	Description string    `json:"description,omitempty"`
 	DockerImage string    `json:"docker_image"`
-	Arguments   string    `json:"arguments,omitempty"`
+	Commands    string    `json:"commands,omitempty"`   // command to set in container
+	Arguments   string    `json:"arguments,omitempty"`  // arguments to use in container
 	OpenPorts   string    `json:"open_ports,omitempty"` // store it as a comma-separated string
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
@@ -57,6 +59,7 @@ func (app *App) ToAppSQLiteObj() AppSQLiteObj {
 		Description: app.Description,
 		DockerImage: app.DockerImage,
 		Arguments:   app.Arguments,
+		Commands:    app.Commands,
 		OpenPorts:   openPortsCSV,
 		CreatedAt:   app.CreatedAt,
 		UpdatedAt:   app.UpdatedAt,
@@ -78,6 +81,7 @@ func (app *AppSQLiteObj) ToAppObj() App {
 		RequireGPU:  app.RequireGPU,
 		Description: app.Description,
 		DockerImage: app.DockerImage,
+		Commands:    app.Commands,
 		Arguments:   app.Arguments,
 		OpenPorts:   openports,
 		CreatedAt:   app.CreatedAt,

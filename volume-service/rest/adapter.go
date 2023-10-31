@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/lab-paper-code/ksv/volume-service/commons"
 	"github.com/lab-paper-code/ksv/volume-service/logic"
@@ -29,6 +30,16 @@ func Start(config *commons.Config, logik *logic.Logic) (*RESTAdapter, error) {
 
 	addr := fmt.Sprintf(":%d", config.RestPort)
 	router := gin.Default()
+	router.Use(cors.New(
+		cors.Config{
+			AllowOrigins: []string{"http://155.230.36.27:5173", "http://155.230.36.27:4140"},
+			AllowMethods: []string{"POST", "GET", "PATCH", "DELETE", "OPTIONS", "HEAD"},
+			AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+			// allow headers
+			AllowCredentials: true,
+			// allow credentials
+			MaxAge: 24 * time.Hour,
+		}))
 
 	adapter := &RESTAdapter{
 		config:  config,
