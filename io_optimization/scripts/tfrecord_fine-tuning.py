@@ -99,7 +99,7 @@ def main():
 
     dataset = tf.data.TFRecordDataset(tfrecord_list, num_parallel_reads=None)
     dataset = dataset.map(parse_tfrecord)
-    dataset = dataset.shuffle(seed=42, buffer_size=25000)
+    dataset = dataset.shuffle(seed=42, buffer_size=256)
     dataset = dataset.batch(settings['batch_size'])
 
     base_model = tf.keras.applications.MobileNet(weights=settings['base_model'], include_top=False, input_shape=(224, 224, 3))
