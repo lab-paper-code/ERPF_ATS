@@ -71,7 +71,7 @@ func (adapter *K8SAdapter) getWebdavContainers(device *types.Device, volume *typ
 	return []apiv1.Container{
 		{
 			Name:  "webdav",
-			Image: "yechae/ksv-webdav:v2",
+			Image: "daclab/ksv-webdav:v2",
 			Ports: []apiv1.ContainerPort{
 				{
 					ContainerPort: 80,
@@ -268,9 +268,9 @@ func (adapter *K8SAdapter) createWebdavService(volume *types.Volume) error {
 				},
 			},
 			Selector: map[string]string{
-				"app": adapter.GetWebdavDeploymentName(volume.ID),
+				"webdav-name": adapter.GetWebdavDeploymentName(volume.ID),
 			},
-			Type: apiv1.ServiceTypeClusterIP,
+			Type: apiv1.ServiceTypeNodePort,
 		},
 	}
 

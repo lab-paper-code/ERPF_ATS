@@ -2,12 +2,14 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -15,6 +17,8 @@ const (
 	volumeNamespace       string = objectNamespace
 	storageClassName      string = "rook-cephfs"
 )
+
+const JSONPatchType k8stypes.PatchType = "application/json-patch+json" // added for volume resize
 
 func (adapter *K8SAdapter) GetStorageClassName() string {
 	return storageClassName
@@ -111,12 +115,18 @@ func (adapter *K8SAdapter) ResizeVolume(volumeID string, size int64) error {
 		return err
 	}
 
-	// TODO: double check if this works -> not working, figuring out how to fix this
-	pvc.Spec.Resources.Requests.Storage().Set(size)
+	currentSize := pvc.Spec.Resources.Requests.Storage().Value()
+	if currentSize >= size {
+		logger.Info("The requested size is less than or equal to the current size. No action required.")
+		return nil
+	}
 
-	_, updateErr := pvcclient.Update(ctx, pvc, metav1.UpdateOptions{})
-	if updateErr != nil {
-		return updateErr
+	// Create a patch to update the pvc size
+	patchData := []byte(fmt.Sprintf(`[{"op": "replace", "path": "/spec/resources/requests/storage", "value": "%d"}]`, size))
+
+	_, patchErr := pvcclient.Patch(ctx, pvc.Name, JSONPatchType, patchData, metav1.PatchOptions{})
+	if patchErr != nil {
+		return patchErr
 	}
 
 	return nil
