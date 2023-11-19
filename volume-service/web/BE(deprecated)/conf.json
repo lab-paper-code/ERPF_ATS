@@ -1,0 +1,10 @@
+{
+    "sys_path": "/home/palisade2/jiseob/ksv/volume-service/web/ksv/",
+
+    "apps": ["http://155.230.36.27:31200/apps", "http://155.230.36.27:31200/apps/"],
+    "appruns":["http://155.230.36.27:31200/appruns", "http://155.230.36.27:31200/appruns/"],
+    "devices":["http://155.230.36.27:31200/devices", "http://155.230.36.27:31200/devices/"],
+    "volumes":["http://155.230.36.27:31200/volumes", "http://155.230.36.27:31200/volumes/"],
+    "mounts": ["http://155.230.36.27:31200/mounts/"]
+    
+}

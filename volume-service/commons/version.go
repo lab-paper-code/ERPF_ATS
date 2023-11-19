@@ -25,7 +25,7 @@ type VersionInfo struct {
 // GetVersion returns VersionInfo object
 func GetVersion() VersionInfo {
 	return VersionInfo{
-		ClientVersion: clientVersion,
+		ClientVersion: GetClientVersion(),
 		GitCommit:     gitCommit,
 		BuildDate:     buildDate,
 		GoVersion:     runtime.Version(),
