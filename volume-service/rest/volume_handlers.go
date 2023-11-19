@@ -1,20 +1,92 @@
 package rest
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
+	"gopkg.in/resty.v1"
 )
 
 const (
-	volumeSizeMinimum int64 = 1024 * 1024 * 1024 // 1GB
+	prometheusServiceIP       = "155.230.36.27"
+	prometheusPort            = "30803"
+	query                     = "sum(node_filesystem_avail_bytes) by (node)"
+	volumeSizeMinimum   int64 = 1024 * 1024 * 1024 // 1GB
 )
+
+var (
+	currentTotalVolumeSizeAvail, volumeErr = getAvailVolumeSize()
+	D                                      = 100
+	currentVolumeSizeAvail                 = int64(currentTotalVolumeSizeAvail / D)
+)
+
+func initializeVolumeInfo() {
+	// Call getAvailVolumeSize() when setupVolumeRouter()
+	fmt.Print(currentVolumeSizeAvail)
+	// Handle the error if necessary
+	if volumeErr != nil {
+		// Handle the error, for example, print it or log it.
+		fmt.Println("Error:", volumeErr)
+	}
+}
+
+func getAvailVolumeSize() (int, error) {
+	url := fmt.Sprintf("http://%s:%s/api/v1/query", prometheusServiceIP, prometheusPort)
+	data := map[string]string{"query": query}
+
+	client := resty.New()
+	resp, err := client.R().
+		SetFormData(data).
+		Post(url)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if resp.StatusCode() == http.StatusOK {
+		var responseData map[string]interface{}
+		if err := json.Unmarshal(resp.Body(), &responseData); err != nil {
+			return 0, err
+		}
+
+		// Assuming the numbers are in a field called "values"
+		result := responseData["data"].(map[string]interface{})["result"].([]interface{})
+		sum := 0
+
+		for _, value := range result {
+			data := value.(map[string]interface{})["value"].([]interface{})
+
+			// Adjust the index or key based on your JSON structure
+			if len(data) >= 2 {
+				// Check if the value at index 1 is a float64 or a string
+				if num, ok := data[1].(float64); ok {
+					sum += int(num)
+				} else if numStr, ok := data[1].(string); ok {
+					num, err := strconv.ParseFloat(numStr, 64)
+					if err != nil {
+						return 0, err
+					}
+					sum += int(num)
+				}
+			}
+		}
+
+		return sum, nil
+	}
+
+	return 0, fmt.Errorf("failed to execute the query. Status code: %d", resp.StatusCode())
+}
 
 // setupVolumeRouter setup http request router for volume
 func (adapter *RESTAdapter) setupVolumeRouter() {
+	// initialize currentTotalVolumeSizeAvail
+	initializeVolumeInfo()
 	// any devices can call these APIs
 	adapter.router.GET("/volumes", adapter.basicAuthDeviceOrAdmin, adapter.handleListVolumes)
 	adapter.router.GET("/volumes/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetVolume)
@@ -150,6 +222,20 @@ func (adapter *RESTAdapter) handleCreateVolume(c *gin.Context) {
 		volumeSizeNum = volumeSizeMinimum
 	}
 
+	// check for available volumesize
+	currentTotalVolumeSizeAvail, volumeErr = getAvailVolumeSize()
+	if volumeErr != nil {
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// if user request exceeds available volumesize, set to currentVolumeSizeAvail
+	if volumeSizeNum > currentVolumeSizeAvail {
+		logger.Debugf("you cannot give volume size more than %d, set to %d", currentVolumeSizeAvail, currentVolumeSizeAvail)
+		volumeSizeNum = currentVolumeSizeAvail
+	}
+
 	volume := types.Volume{
 		ID:         types.NewVolumeID(),
 		VolumeSize: volumeSizeNum,
@@ -229,6 +315,20 @@ func (adapter *RESTAdapter) handleUpdateVolume(c *gin.Context) {
 		volumeSizeNum = volumeSizeMinimum
 	}
 
+	// check for available volumesize
+	currentTotalVolumeSizeAvail, volumeErr = getAvailVolumeSize()
+	if volumeErr != nil {
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// if user request exceeds available volumesize, set to currentVolumeSizeAvail
+	if volumeSizeNum > currentVolumeSizeAvail {
+		logger.Debugf("you cannot give volume size more than %d, set to %d", currentVolumeSizeAvail, currentVolumeSizeAvail)
+		volumeSizeNum = currentVolumeSizeAvail
+	}
+
 	volume, err := adapter.logic.GetVolume(volumeID)
 	if err != nil {
 		// fail
@@ -286,21 +386,6 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 		return
 	}
 
-	/*
-		type volumeMountRequest struct {
-		}
-
-		var input volumeMountRequest
-
-		err = c.BindJSON(&input)
-		if err != nil {
-			// fail
-			logger.Error(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-	*/
-
 	volume, err := adapter.logic.GetVolume(volumeID)
 	if err != nil {
 		// fail
@@ -330,6 +415,21 @@ func (adapter *RESTAdapter) handleMountVolume(c *gin.Context) {
 	c.JSON(http.StatusOK, volume)
 }
 
+/*
+type volumeMountRequest struct {
+}
+
+var input volumeMountRequest
+
+err = c.BindJSON(&input)
+
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+*/
 func (adapter *RESTAdapter) handleUnmountVolume(c *gin.Context) {
 	logger := log.WithFields(log.Fields{
 		"package":  "rest",
