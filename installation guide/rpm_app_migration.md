@@ -26,6 +26,12 @@
     HOST : pod의 내부 IP(10.X.X.X)를 입력합니다.
     PORT : <App 등록 시 노출시킨 포트>
 
+8. (**중요**) /app 내의 output, output2 폴더에 쓰기 권한을 부여합니다
+```
+    sudo chmod 777 output output2 
+```
+output은 파드에서 처리한 결과가 저장되는 폴더, output2는 실디바이스에서 처리한 결과가 저장되는 폴더입니다.
+실디바이스에서 마운트된 폴더에만 쓰기 권한을 부여하면 실디바이스 결과가 제대로 저장되지 않습니다.
 
 **실디바이스**
 1. PV를 마운트할 포인트를 찾습니다.
@@ -48,5 +54,10 @@
     2. OUTPUT_PATH : 실디바이스 기준 inference 결과를 저장할 경로를 입력합니다.
     3. IMG_PATH : 라즈베리파이 기준 webdav와 마운트 되어서 이미지 저장된 경로를 입력합니다.
 
-5. 엣지 서버(애플리케이션 파드 내 /app), 실디바이스 img_inference_migration/ 경로 에서 각각 python3 server.py, python3 device.py 순으로 실행합니다.
-- 애플리케이션 파드 내에서 server.py로 FastAPI로 서버를 실행하고, 실디바이스에서 device.py로 요청을 보내므로, server.py를 먼저 실행해야 합니다.
+5. 마운트 포인트에서 output, output2 폴더에 쓰기 권한을 부여합니다.(**중요**)
+```
+    sudo chmod 777 output output2
+```
+
+6. 엣지 서버(애플리케이션 파드 내 /app), 실디바이스 img_inference_migration/ 경로 에서 각각 python3 server.py, sh run_device.sh 순으로 실행합니다.
+- 애플리케이션 파드 내에서 server.py로 FastAPI로 서버를 실행하고, 실디바이스에서 run_device.sh로 요청을 보내므로, server.py를 먼저 실행해야 합니다.
