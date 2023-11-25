@@ -131,3 +131,30 @@ func (adapter *K8SAdapter) ResizeVolume(volumeID string, size int64) error {
 
 	return nil
 }
+
+func (adapter *K8SAdapter) DeleteVolume(volumeID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "DeleteVolume",
+	})
+
+	logger.Debug("received DeleteVolume()")
+
+	volumeClaimName := adapter.GetVolumeClaimName(volumeID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	pvcclient := adapter.clientSet.CoreV1().PersistentVolumeClaims(volumeNamespace)
+	deletePolicy := metav1.DeletePropagationForeground // change policy if needed
+
+	err := pvcclient.Delete(ctx, volumeClaimName, metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -13,6 +13,7 @@
   import createVolume from "./routes/volume/Create.svelte"
   import getVolumes from "./routes/volume/List.svelte"
   import updateVolume from "./routes/volume/Update.svelte"
+  import deleteVolume from "./routes/volume/Delete.svelte"
   import mountVolume from "./routes/volume/Mount.svelte"
   import unmountVolume from "./routes/volume/Unmount.svelte"
 
@@ -33,6 +34,7 @@
     '/volumes' : createVolume,
     '/volumes/detail' : getVolumes,
     '/volumes/update' : updateVolume,
+    '/volumes/delete' : deleteVolume,
     '/volumes/mount' : mountVolume,
     '/volumes/unmount' : unmountVolume,
 

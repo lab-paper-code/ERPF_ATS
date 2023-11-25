@@ -1,17 +1,17 @@
 # k8s cluster 구성
-* kubernetes 패키지 설치 , master 노드와 worker 노드 간의 연결 설정    
-* docker가 설치되어 있어야함
-* 기존 kubernetes가 설치된 환경이라면, kubernetes 관련 프로세스 (kube*)를 모두 제거
-* 기존 kubernetes가 설치된 환경이라면, 연결이 끊어진 mount-point (/var/lib/kubelet/...)를 모두 제거
+* kubernetes 패키지를 설치하고, master 노드와 worker 노드 간의 연결을 설정합니다.
+* docker가 설치되어 있어야 합니다.
+* 기존에 kubernetes가 설치된 환경이라면, 
+  kubernetes 관련 프로세스 (kube*)를 모두 제거하고 
+  연결이 끊어진 mount-point (/var/lib/kubelet/...)를 모두 제거합니다.
 
 
 ### Hostname 설정
-master/worker 노드임을 알 수 있게 hostname 변경, 재로그인시 변경
+master/worker 노드임을 알 수 있게 hostname을 변경합니다. 재로그인시 변경합니다.
 ```
 sudo hostnamectl set-hostname master
 
 sudo hostnamectl set-hostname worker1
-...
 ```
 
 
@@ -20,7 +20,7 @@ sudo hostnamectl set-hostname worker1
 ```
 SELINUX=disabled
 ```
-재시작후 적용
+로 변경 후 재시작합니다.
 
 
 ### Firewall 해제
@@ -38,17 +38,17 @@ sudo swapoff -a && sudo sed -i '/swap/s/^/#/' /etc/fstab
 
 
 ### iptables가 브리지된 트래픽을 보도록 허용
-아래 명령으로 br_netfilter모듈이 로드 되었는지 확인
+아래 명령으로 br_netfilter모듈이 로드 되었는지 확인합니다.
 ```
 lsmod | grep br_netfilter
 ```
 
-명시적으로 로드하려면 sudo modprobe br_netfilter로 모듈을 로딩
+또는 sudo modprobe br_netfilter로 모듈을 명시적으로 로딩할 수 있습니다.
 ```
 sudo modprobe br_netfilter
 ```
 
-쿠버네티스에서 br_netfilter를 사용하도록 설정
+쿠버네티스에서 br_netfilter를 사용하도록 설정합니다.
 ```
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 br_netfilter
@@ -64,29 +64,29 @@ sudo sysctl --system
 
 
 ### kubeadm, kubelet 및 kubectl 설치
-모든 컴퓨터에 다음 패키지를 설치
+모든 컴퓨터에 다음 패키지를 설치합니다.
 
-* kubeadm: 클러스터를 부트스트랩 함.
-* kubelet: 클러스터의 모든 머신에서 실행되고 포드 및 컨테이너 시작과 같은 작업을 수행하는 구성 요소.
-* kubectl: 클러스터와 통신하기 위한 명령줄 util
+* kubeadm: 클러스터를 부트스트랩합니다.
+* kubelet: 클러스터의 모든 머신에서 실행되고 포드 및 컨테이너 시작과 같은 작업을 수행합니다.
+* kubectl: 클러스터와 통신하기 위한 커맨드라인 유틸리티입니다.
 
-apt 패키지 업데이트 및 k8s apt 저장소를 사용하는데 필요한 패키지 설치
+apt 패키지를 업데이트하고 k8s apt 저장소를 사용하는데 필요한 패키지를 설치합니다.
 ```
 sudo apt-get update
 sudo apt-get install -y apt-transport-https ca-certificates curl
 ```
 
-Google Cloud 공개 서명 키를 다운로
+Google Cloud 공개 서명 키를 다운로드합니다. 
 ```
 sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
 ```
 
-Kubernetes apt리포지토리를 추가
+Kubernetes apt 리포지토리를 추가합니다.
 ```
-echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-focal main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 ```
 
-apt패키지 인덱스를 업데이트 하고 kubelet, kubeadm 및 kubectl을 설치하고 해당 버전을 고정
+apt패키지 인덱스를 업데이트 하고 kubelet, kubeadm 및 kubectl을 설치하고 해당 버전을 고정합니다.
 ```
 sudo apt-get update
 sudo apt-get install -y kubelet kubeadm kubectl
@@ -109,7 +109,7 @@ cat <<EOF | sudo tee /etc/docker/daemon.json
 EOF
 ```
 
-Docker를 다시 시작하고 부팅 시 활성화
+Docker를 다시 시작하고 부팅 시 활성화됩니다.
 ```
 sudo systemctl enable docker
 sudo systemctl daemon-reload
@@ -119,12 +119,12 @@ sudo systemctl restart kubelet
 
 
 ### kubeadm을 사용하여 kubernetes cluster 구성하기 (Master 노드에서만)
-kubeadm init 명령을 통해서 클러스터를 생성. Flannel 을 Network Addon 사용
+kubeadm init 명령을 통해서 클러스터를 생성합니다. Flannel 을 Network Addon으로 사용합니다.
 ```
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=<Master 노드의 IP>
 ```
 
-아래와 같이 화면에 출력된 클러스터 Join 명령줄을 복사하여 워커 노드들에서 실행
+아래와 같이 화면에 출력된 클러스터 Join 명령줄을 복사하여 워커 노드들에서 실행합니다.
 ```
 Your Kubernetes control-plane has initialized successfully!
 To start using your cluster, you need to run the following as a regular user:
@@ -147,7 +147,7 @@ kubeadm join <Master 노드의 IP>:6443 --token <Token> \
 ```
 
 ### kubeadm을 사용하여 kubernetes cluster 구성하기 (Worker 노드들에서)
-kubeadmin init 명령의 출력으로 나온 member join 명령줄을 복사하여 실행
+kubeadmin init 명령의 출력으로 나온 member join 명령줄을 복사하여 실행합니다.
 
 ```
 sudo kubeadm join <Master 노드의 IP>:6443 --token <Token> \
@@ -156,17 +156,17 @@ sudo kubeadm join <Master 노드의 IP>:6443 --token <Token> \
 
 
 ### Node의 상태 확인 (Master 노드에서만)
-아래 명령으로 모든 노드가 Ready 상태인지 확인
+아래 명령으로 모든 노드가 Ready 상태인지 확인합니다.
 ```
 kubectl get nodes
 ```
 
-NotReady 라고 나온다면, CoreDNS Pod 들이 Pending 상태. 아래 명령으로 coredns 코드를 수정
+NotReady 라고 나온다면, CoreDNS Pod들이 Pending 상태입니다. 아래 명령으로 coredns 코드를 수정합니다.
 ```
 kubectl edit cm coredns -n kube-system
 ```
 
-24라인의 loop 명령어를 주석처리
+24라인의 loop 명령어를 주석처리합니다.
 ```
 cache 30
 #loop
@@ -174,7 +174,7 @@ reload
 loadbalance
 ```
 
-Flannel network addon 설치
+Flannel network addon을 설치합니다.
 ```
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 ```
@@ -210,7 +210,7 @@ kubeadm token list
 ```
 kubeadm token create
 ```
-
+a
 
 ### 클러스터 디스커버리 토큰 해시 찾기
 ```
@@ -218,8 +218,8 @@ openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outfor
 ```
 
 
-### Pod network addon (
-* [마스터 노드에서만 실행] Pod가 서로 통신 할 수 있도록 CNI(Container Network Interface) 기반 Pod 네트워크 추가 기능 구성한다.
+### Pod network addon
+* [마스터 노드에서만 실행] Pod가 서로 통신 할 수 있도록 CNI(Container Network Interface) 기반 Pod 네트워크 추가 기능을 구성합니다.
 
 * flannel (사용)
 ```
@@ -236,7 +236,7 @@ daemonset.apps/kube-flannel-ds-arm created
 daemonset.apps/kube-flannel-ds-ppc64le created
 daemonset.apps/kube-flannel-ds-s390x created
 ```
-* flannel 설치 확인
+* flannel이 설치되었는지 확인합니다.
 ```
 $ kubectl get pod --namespace=kube-system -o wide
 NAME                                      READY   STATUS    RESTARTS   AGE     IP            NODE               NOMINATED NODE   READINESS GATES
@@ -252,6 +252,10 @@ kube-proxy-9sw4k                          1/1     Running   5          7d17h   1
 kube-proxy-b5hqc                          1/1     Running   4          7d17h   10.0.2.15     bsc-kube-master    <none>           <none>
 kube-proxy-m5npl                          1/1     Running   1          3d22h   10.0.2.15     bsc-kube-worker2   <none>           <none>
 kube-scheduler-bsc-kube-master            1/1     Running   4          7d17h   10.0.2.15     bsc-kube-master    <none>           <none>
+
+
+
+
 ```
 * calico  (이전에 사용했었으나 불안정해서 flannel로 교체)
 ```

@@ -237,13 +237,18 @@ Multi-Volume을 체크해제하고, 특정 VolumeID를 입력할 경우. 특정 
 RPM DB에 등록된 Volume 정보를 수정합니다.
 볼륨 크기를 수정합니다.
 
-4. Mount Volume(user)
+4. Delete Volume(admin, user)
+![delete-volume](./img/delete_volume.png)
+볼륨을 삭제합니다.
+볼륨이 마운트 되어 있다면 삭제하지 않고, 마운트 되어 있지 않다면 삭제합니다.
+
+5. Mount Volume(user)
 ![mount_volume](./img/mount_volume.png)
 실디바이스에 볼륨을 마운트하기 위한 WebDAV 파드를 생성합니다.
 WebDAV 파드를 생성하기 위한 리소스(Deployment, Service, Ingress)를 같이 생성합니다.
 WebDAV 파드를 실디바이스의 디렉토리에 마운트할 경우, PV를 가상 스토리지로 이용할 수 있습니다.
 (rpm_data_share.md 파일에 예시를 설명하였습니다.)
 
-5. Unmount Volume(user, admin)
+6. Unmount Volume(user, admin)
 ![unmount_volume](./img/unmount_volume.png)
 VolumeID를 입력받아 WebDAV 파드 리소스를 제거합니다.
