@@ -48,6 +48,19 @@ func (adapter *DBAdapter) InsertVolume(volume *types.Volume) error {
 	return nil
 }
 
+func (adapter *DBAdapter) DeleteVolume(volume *types.Volume) error {
+	result := adapter.db.Delete(volume)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected != 1 {
+		return xerrors.Errorf("failed to delete a volume")
+	}
+
+	return nil
+}
+
 func (adapter *DBAdapter) UpdateVolumeSize(volumeID string, size int64) error {
 	var record types.Volume
 	result := adapter.db.Where("id = ?", volumeID).Find(&record)

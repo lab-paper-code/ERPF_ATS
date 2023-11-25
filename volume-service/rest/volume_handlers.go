@@ -92,6 +92,7 @@ func (adapter *RESTAdapter) setupVolumeRouter() {
 	adapter.router.GET("/volumes/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetVolume)
 	adapter.router.POST("/volumes", adapter.basicAuthDeviceOrAdmin, adapter.handleCreateVolume)
 	adapter.router.PATCH("/volumes/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUpdateVolume)
+	adapter.router.DELETE("/volumes/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleDeleteVolume)
 
 	adapter.router.POST("/mounts/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleMountVolume)
 	adapter.router.DELETE("/mounts/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUnmountVolume)
@@ -356,6 +357,63 @@ func (adapter *RESTAdapter) handleUpdateVolume(c *gin.Context) {
 	}
 
 	err = adapter.logic.ResizeVolume(volumeID, volumeSizeNum)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, volume)
+}
+
+func (adapter *RESTAdapter) handleDeleteVolume(c *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"package":  "rest",
+		"struct":   "RESTAdapter",
+		"function": "handleDeleteVolume",
+	})
+
+	logger.Infof("access request to %s", c.Request.URL)
+
+	user := c.GetString(gin.AuthUserKey)
+	volumeID := c.Param("id")
+
+	err := types.ValidateVolumeID(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	volume, err := adapter.logic.GetVolume(volumeID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !adapter.isAdminUser(user) && volume.DeviceID != user {
+		// requestiong other's volume info
+		err := xerrors.Errorf("failed to get volume %s, you cannot access other devices' volume info", volumeID)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	if volume.Mounted {
+		// deleting mounted volume
+		err := xerrors.Errorf("failed to delete volume %s, you must unmount before you delete volume", volumeID)
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Debugf("Deleting Volume ID: %s", volumeID)
+
+	err = adapter.logic.DeleteVolume(volumeID)
 	if err != nil {
 		// fail
 		logger.Error(err)

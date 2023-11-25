@@ -146,6 +146,13 @@
                         <li>
                             <a
                                 use:link
+                                href="/volumes/delete"
+                                class="dropdown-item">Delete Volume</a
+                            >
+                        </li>
+                        <li>
+                            <a
+                                use:link
                                 href="/volumes/mount"
                                 class="dropdown-item">Mount Volume</a
                             >

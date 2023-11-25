@@ -83,6 +83,39 @@ func (logic *Logic) ResizeVolume(volumeID string, size int64) error {
 	return logic.dbAdapter.UpdateVolumeSize(volumeID, size)
 }
 
+func (logic *Logic) DeleteVolume(volumeID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "DeleteVolume",
+	})
+
+	logger.Debug("received DeleteVolume()")
+
+	volume, err := logic.dbAdapter.GetVolume(volumeID)
+	if err != nil {
+		return err
+	}
+
+	if logic.config.NoKubernetes {
+		logger.Debug("bypass k8sAdapter.DeleteVolume()")
+	} else {
+		// already mounted -> cannot delete
+		if volume.Mounted {
+			logger.Debugf("volume %s is already mounted, please unmount before you delete volume", volume.ID)
+			return nil
+		}
+
+		logger.Debugf("Deleting volume %s for device %s", volume.ID, volume.DeviceID)
+		err = logic.k8sAdapter.DeleteVolume(volumeID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return logic.dbAdapter.DeleteVolume(&volume)
+}
+
 func (logic *Logic) MountVolume(volumeID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
