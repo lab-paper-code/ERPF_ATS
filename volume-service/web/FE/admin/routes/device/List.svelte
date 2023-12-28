@@ -70,7 +70,7 @@
         <input type="checkbox" bind:checked={isMulti} on:change={clearOutput} /> Multi-device
     </label>
 
-    <button style="margin-left: 10pt;" on:click={getDevices}>Get Devices</button>
+    <button style="margin-left: 10pt;" on:click={getDevices}>Search Device</button>
 </form>
 
 {#if isMulti}

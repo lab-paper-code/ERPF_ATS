@@ -90,7 +90,7 @@
         Multi-appRun
     </label>
 
-    <button style=" margin-left: 10px;" on:click={getAppRuns}>Execute</button>
+    <button style=" margin-left: 10px;" on:click={getAppRuns}>Search AppRun</button>
 </div>
 
 <div class="output container mx-auto" style="margin-top: 20px; margin-left: 10px;">

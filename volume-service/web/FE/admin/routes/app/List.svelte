@@ -96,7 +96,7 @@
             />
             Multi-app
         </label>
-        <button style=" margin-left: 10px;" on:click={getApps}>Get Apps</button>
+        <button style=" margin-left: 10px;" on:click={getApps}>Search App</button>
     </form>
 </div>
 

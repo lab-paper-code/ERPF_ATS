@@ -1,45 +1,108 @@
-## RPM 서비스 설치
+# RPM 서비스 설치
 RPM 서비스를 이용하기 위해서는 Go 1.18 버전 및 Node.js 14.18 버전 이상이 필요합니다.
 서비스는 Go 1.18 버전 및 Node.js 18.17.1 버전을 이용하여 작성되었습니다.
 
-### Go Download 
-https://go.dev/dl/ 
+## 1.사전 준비
 
+### 1.1.Go 설치 및 버전 확인
+- apt를 통해 Go를 설치하면 1.13 이상의 버전을 설치할 수 없습니다.
+- Go 설치 환경은 다양할 수 있기 때문에, Go 바이너리 파일이 /usr/local/ 아래 설치되었다고 가정하겠습니다.
 
-### Go 버전 확인
+#### 1.1.1.기존 Go 삭제
 ```
-    go version
-```
-### Node.js Download
-https://nodejs.org/en/download
-
-
-### Node.js 버전 확인
-```
-    node --version
+sudo rm -rf /usr/local/go
 ```
 
+#### 1.1.2.Go 다운로드
+wget을 설치합니다.
+```
+sudo apt-get install wget
+```
 
-### git clone
+- Go 홈페이지에서 Go를 다운로드합니다.
+- 홈페이지에서 마우스 우클릭을 통해 설치하고자하는 버전의 링크를 복사합니다.
+
+https://go.dev/dl/
+
+```
+wget {복사한 링크}
+```
+
+#### 1.1.3.Go 설치
+다운로드한 tar 파일 압축을 해제합니다.
+```
+sudo tar -C /usr/local -xzf go1.XX.X.linux-amd64.tar.gz
+```
+~/.profile에 다음과 같이 PATH를 추가하고 적용합니다.
+```
+export PATH=$PATH:/usr/local/go/bin
+source ~/.profile
+go version # 정상적으로 설치 되었는지 확인
+```
+
+### 1.2.Node.js 설치 및 버전 확인
+
+#### 1.2.1.Node.js, npm 기존 버전 삭제
+- nvm을 이용해 node.js를 설치합니다.
+- 기존에 apt로 node.js, npm을 설치했다면 제거 후 시작합니다.
+```
+sudo apt-get remove nodejs
+sudo apt-get remove npm
+```
+
+#### 1.2.2.nvm 설치
+```
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm -v # 설치되었는지 확인
+```
+
+## 1.2.3.Node.js lts 버전 설치
+```
+nvm install --lts
+nvm run default --version
+nvm alias default lts/*
+
+node -v
+npm -v # 설치되었는지 확인
+```
+
+### 1.3.방화벽 설정(포트 열기)
+- 방화벽 설정에서 백엔드 서버와 프론트엔드 서버 포트를 허용합니다.
+- 기본 포트는 프론트엔드(5173, 4140), 백엔드(31200)으로 설정되어 있습니다.
+```
+iptables -I INPUT -p tcp --dport {백엔드 서버 포트} -j ACCEPT
+iptables -I INPUT -p tcp --dport {프론트엔드 서버 포트} -j ACCEPT
+```
+
+## 2. RPM 서비스(볼륨 서비스) 설치
+
+### 2.1.git clone
 git clone으로 리포지토리를 복사해옵니다.
 ```
-    git clone https://github.com/lab-paper-code/ksv.git
+git clone https://github.com/lab-paper-code/ksv.git
 ```
 
+### 2.2.URL 수정 -> 코드 수정하고 재개
+### 여기서 시작
 
-### 실행 파일 생성
-volume-service/ 디렉토리 아래에 실행파일을 만들기 위한 Makefile이 있습니다.
-Makefile을 실행하면 환경변수를 자동으로 설정하고 volume-service/bin/ 폴더 아래에 실행 파일(volume-service)을 생성합니다.
+/volume-service/rest/adapter.go
+cors 설정 - 155.230.36.27로 하드코딩된 부분 사용 서버에 맞게 설정 필요
 
+/volume-service/rest/volume-handlers.go
+prometheusServiceIP, prometheusPort 수정 필요
 
-### RPM 서비스 실행
+실행 파일 생성
+
+- volume-service/ 디렉토리 아래에 실행파일을 만들기 위한 Makefile이 있습니다.
+- Makefile을 실행하면 환경변수를 자동으로 설정하고 volume-service/bin/ 폴더 아래에 실행 파일(volume-service)을 생성합니다.
+
+### 2.3.URL 수정
 volume-service/ 경로에서
 ```
-    ./bin/volume-service -c config.yaml 
-    
+./bin/volume-service -c config.yaml
 ```
 로 서비스를 실행합니다.
-
 
 ### RPM 프론트엔드 설정
 volume-service/web/FE 에는 프론트엔드 실행을 위한 파일이 저장되어 있습니다.

@@ -104,7 +104,7 @@
             /> Multi-volume
         </label>
         <button style="margin-left: 10px;" on:click={getVolumes}
-            >Get Volumes</button
+            >Search Volume</button
         >
     </form>
 </div>

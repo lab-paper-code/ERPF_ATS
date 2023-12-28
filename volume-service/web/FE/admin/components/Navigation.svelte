@@ -146,13 +146,6 @@
                         <li>
                             <a
                                 use:link
-                                href="/volumes/delete"
-                                class="dropdown-item">Delete Volume</a
-                            >
-                        </li>
-                        <li>
-                            <a
-                                use:link
                                 href="/volumes/mount"
                                 class="dropdown-item">Mount Volume</a
                             >
@@ -165,16 +158,6 @@
                             >
                         </li>
                     </ul>
-                </li>
-                <li class="nav-item active">
-                    <a use:link href="/workflow1" class="nav-link disabled">
-                        Workflow1
-                    </a>
-                </li>
-                <li class="nav-item active">
-                    <a use:link href="/workflow2" class="nav-link disabled">
-                        Workflow2
-                    </a>
                 </li>
             </ul>
         </div>
