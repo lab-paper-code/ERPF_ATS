@@ -8,3 +8,5 @@ rm -r src/*
 mv ../admin_ref/* src/
 npm i bootstrap
 npm i svelte-spa-router
+cd ..
+rm -d admin_ref/
