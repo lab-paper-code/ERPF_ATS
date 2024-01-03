@@ -3,6 +3,29 @@
 rook version : 1.9.10
 ceph version : 16.2.10
 
+## [중요] k8s가 heterogeneous cluster로 구성되었을 때
+* 예를 들어 k8s cluster가 서버 3대와 라즈베리파이 2대로 구성되었을 때
+* 라즈베리파이의 자원을 사용하지 않게 하는 방법입니다.   
+
+* 아래의 ceph 코드 clone은 동일합니다. clone 후 rook/deploy/examples 로 이동합니다.
+  * crds, common, operator는 그대로 생성해줍니다.
+```
+cd rook/deploy/examples
+kubectl create -f crds.yaml -f common.yaml -f operator.yaml
+```
+
+* 라즈베리 파이인 노드들에 대해 해당 label을 추가해줍니다.
+```
+kubectl label node <raspberrypi_node_name> rookrole=no-rook-node
+```
+
+* 이후 KSV repository의 k8s/rook-ceph의 cluster.yaml을 실행합니다.
+```
+cd ~/KSV/k8s/
+kubectl create -f cluster.yaml
+```
+
+* cluster 구성 및 OSD pod가 성공적으로 배포된 후에  rook ceph 설치 - ceph toolbox 설치 부터 진행합니다.
 
 ## rook ceph 설치 
 
