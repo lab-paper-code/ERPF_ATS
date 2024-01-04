@@ -1,4 +1,0 @@
-# HOW TO SETUP WEB SERVICE
-
-
-1. 

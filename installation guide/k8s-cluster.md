@@ -1,277 +1,197 @@
-# k8s cluster 구성
-* kubernetes 패키지를 설치하고, master 노드와 worker 노드 간의 연결을 설정합니다.
-* docker가 설치되어 있어야 합니다.
-* 기존에 kubernetes가 설치된 환경이라면, 
-  kubernetes 관련 프로세스 (kube*)를 모두 제거하고 
-  연결이 끊어진 mount-point (/var/lib/kubelet/...)를 모두 제거합니다.
+# k8s 클러스터 구성
+- kubernetes 패키지를 설치하고, master 노드와 worker 노드 간의 연결을 설정합니다.
+- containerd 기반으로 kubernetes 클러스터를 구축합니다.
+- 기존에 kubernetes가 설치된 환경이라면,
+kubernetes 관련 프로세스 (kube*)를 모두 제거하고
+연결이 끊어진 mount-point (/var/lib/kubelet/...)를 모두 제거합니다.
 
+## 1.사전 준비
 
-### Hostname 설정
-master/worker 노드임을 알 수 있게 hostname을 변경합니다. 재로그인시 변경합니다.
+### 1.1.Hostname 설정
+master/worker 노드임을 알 수 있게 hostname을 변경합니다. 재로그인시 반영됩니다.
 ```
 sudo hostnamectl set-hostname master
 
 sudo hostnamectl set-hostname worker1
 ```
 
-
-### SELinux 해제
-/etc/selinux/config 파일에서
+### 1.2.Ubuntu OS 정보 확인(생략 가능)
 ```
-SELINUX=disabled
-```
-로 변경 후 재시작합니다.
-
-
-### Firewall 해제
-```
-sudo ufw disable
-sudo systemctl stop firewalld
-sudo systemctl disable firewalld
+nproc # 코어 확인
+free -h # 메모리 확인
+ifconfig -a # Mac 확인
+sudo cat /sys/class/dmi/id/product_uuid # product_uuid 확인
 ```
 
-
-### Swap 해제
+### 1.3.swap 메모리 비활성화
+kubelet을 사용하기 위해 swap 메모리를 비활성화합니다.
 ```
-sudo swapoff -a && sudo sed -i '/swap/s/^/#/' /etc/fstab
-```
+sudo swapoff -a
+sudo sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
 
-
-### iptables가 브리지된 트래픽을 보도록 허용
-아래 명령으로 br_netfilter모듈이 로드 되었는지 확인합니다.
-```
-lsmod | grep br_netfilter
+sudo free -m # swap 메모리가 0인지 확인
 ```
 
-또는 sudo modprobe br_netfilter로 모듈을 명시적으로 로딩할 수 있습니다.
+### 1.4.방화벽 설정
+kubernetes 클러스터를 구성하는데 필요한 포트 번호와, http, https를 허용합니다.
 ```
-sudo modprobe br_netfilter
+sudo apt-get install firewalld
+systemctl start firewalld
+systemctl enable firewalld
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-service=https
+  
+
+firewall-cmd --permanent --add-port=2379-2380/tcp
+firewall-cmd --permanent --add-port=6443/tcp
+firewall-cmd --permanent --add-port=10250-10252/tcp
+firewall-cmd --permanent --add-port=26443/tcp
+firewall-cmd --permanent --add-port=30000-32767/tcp
+  
+firewall-cmd --permanent --add-port=8285/udp
+firewall-cmd --permanent --add-port=8472/udp
+
+firewall-cmd --reload
 ```
 
-쿠버네티스에서 br_netfilter를 사용하도록 설정합니다.
+### 1.5.Kubernetes 클러스터 실행에 필요한 커널 모듈 로드
+/etc/modules-load.d/ 디렉토리에 containerd.conf라는 파일을 생성하고 overlay 및 br_netfilter 커널 모듈을 부팅 시 로드해야 하는 모듈 목록에 추가합니다.
 ```
-cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+overlay
 br_netfilter
 EOF
 
-cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
-net.bridge.bridge-nf-call-ip6tables = 1
+sudo modprobe overlay
+sudo modprobe br_netfilter
+```
+
+  
+
+### 1.6.sysctl 파라미터 정의
+```
+cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
 net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 
-sudo sysctl --system
+sudo sysctl --system # 시스템을 재시작하지 않고 sysctl 파라미터를 변경합니다.
 ```
 
-
-### kubeadm, kubelet 및 kubectl 설치
-모든 컴퓨터에 다음 패키지를 설치합니다.
-
-* kubeadm: 클러스터를 부트스트랩합니다.
-* kubelet: 클러스터의 모든 머신에서 실행되고 포드 및 컨테이너 시작과 같은 작업을 수행합니다.
-* kubectl: 클러스터와 통신하기 위한 커맨드라인 유틸리티입니다.
-
-apt 패키지를 업데이트하고 k8s apt 저장소를 사용하는데 필요한 패키지를 설치합니다.
+### 1.7.SELinux 모드 수정
+쿠버네티스가 파드 네트워크에 필요한 호스트 파일 시스템에 접근하기 위해 SELinux(보안 아키텍처)를 permissive 모드로 설정합니다.
 ```
-sudo apt-get update
-sudo apt-get install -y apt-transport-https ca-certificates curl
+setenforce 0
+
+sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
+sestatus
 ```
 
-Google Cloud 공개 서명 키를 다운로드합니다. 
-```
-sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-```
+## 2.ContainerD 설치
 
-Kubernetes apt 리포지토리를 추가합니다.
-```
-echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-focal main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-```
-
-apt패키지 인덱스를 업데이트 하고 kubelet, kubeadm 및 kubectl을 설치하고 해당 버전을 고정합니다.
+### 2.1.containerd.io 설치
+- containerd.io는 특정 패키지만 설치합니다. containerD의 모든 기능을 구현하려면 containerd를 설치하면 됩니다.
+- 둘 중 어떤 것을 사용해도 상관없습니다.
+- 라즈베리파이에서는 containerd.io 대신 containerd를 설치합니다.
 ```
 sudo apt-get update
-sudo apt-get install -y kubelet kubeadm kubectl
-sudo apt-mark hold kubelet kubeadm kubectl
+sudo apt-get install \
+apt-transport-https \
+ca-certificates \
+curl \
+gnupg \
+lsb-release
+
+# HTTPS 리포지토리와 함께 apt 패키지 관리자를 사용하는 데 필요한 패키지를 설치하고 Docker GPG 키를 추가
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update # 새로운 저장소가 추가되었으므로, 업데이트
+
+sudo apt-get install containerd.io
+
+sudo apt-get install containerd
+
+sudo systemctl status containerd # 설치 확인
 ```
 
+  
 
-### kubelet cgroup 드라이버 구성 (Docker container 기반)
+### 2.2.ContainerD 구성 파일 생성
 ```
-sudo mkdir /etc/docker
-cat <<EOF | sudo tee /etc/docker/daemon.json
-{
-  "exec-opts": ["native.cgroupdriver=systemd"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m"
-  },
-  "storage-driver": "overlay2"
-}
-EOF
+sudo mkdir -p /etc/containerd
+sudo containerd config default | sudo tee /etc/containerd/config.toml
 ```
 
-Docker를 다시 시작하고 부팅 시 활성화됩니다.
+### 2.3.config.toml 파일 수정
 ```
-sudo systemctl enable docker
-sudo systemctl daemon-reload
-sudo systemctl restart docker
-sudo systemctl restart kubelet
-```
+sudo nano /etc/containerd/config.toml # SystemdCgroup 을 검색해 SystemdCgroup = true로 수정
 
-
-### kubeadm을 사용하여 kubernetes cluster 구성하기 (Master 노드에서만)
-kubeadm init 명령을 통해서 클러스터를 생성합니다. Flannel 을 Network Addon으로 사용합니다.
-```
-sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=<Master 노드의 IP>
+sudo systemctl restart containerd # 수정한 config.toml을 적용 및 재실행
 ```
 
-아래와 같이 화면에 출력된 클러스터 Join 명령줄을 복사하여 워커 노드들에서 실행합니다.
-```
-Your Kubernetes control-plane has initialized successfully!
-To start using your cluster, you need to run the following as a regular user:
+## 3.k8s 설치 및 클러스터 가입
 
-  mkdir -p $HOME/.kube
-  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-  sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-Alternatively, if you are the root user, you can run:
-
-  export KUBECONFIG=/etc/kubernetes/admin.conf
-
-You should now deploy a pod network to the cluster.
-Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
-  https://kubernetes.io/docs/concepts/cluster-administration/addons/
-
-Then you can join any number of worker nodes by running the following on each as root:
-kubeadm join <Master 노드의 IP>:6443 --token <Token> \
-        --discovery-token-ca-cert-hash sha256:<Cert-Hash>
-```
-
-### kubeadm을 사용하여 kubernetes cluster 구성하기 (Worker 노드들에서)
-kubeadmin init 명령의 출력으로 나온 member join 명령줄을 복사하여 실행합니다.
+### 3.1.k8s 설치 준비
+- Kubernetes GPG 키를 검색하여 시스템의 키링에 추가
+- 시스템의 apt 소스 목록에 Kubernetes 레포지토리를 추가
 
 ```
-sudo kubeadm join <Master 노드의 IP>:6443 --token <Token> \
-        --discovery-token-ca-cert-hash sha256:<Cert-Hash>
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+
+sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
 ```
 
+### 3.2kubeadm, kubelet 및 kubectl 패키지 설치, 버전 고정
+```
+sudo apt-get install kubeadm kubelet kubectl -y
 
-### Node의 상태 확인 (Master 노드에서만)
-아래 명령으로 모든 노드가 Ready 상태인지 확인합니다.
-```
-kubectl get nodes
-```
-
-NotReady 라고 나온다면, CoreDNS Pod들이 Pending 상태입니다. 아래 명령으로 coredns 코드를 수정합니다.
-```
-kubectl edit cm coredns -n kube-system
+sudo apt-mark hold kubeadm kubelet kubectl containerd
 ```
 
-24라인의 loop 명령어를 주석처리합니다.
+### 3.3.k8s 클러스터 초기화 전 image 가져오기 (생략 가능)
+미리 이미지를 가져오면 초기화 과정이 더 빠르고 안정적입니다.
 ```
-cache 30
-#loop
-reload
-loadbalance
+sudo kubeadm config images pull
 ```
 
-Flannel network addon을 설치합니다.
+### 3.4.k8s 클러스터 초기화(Master)
 ```
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-```
-
-Flannel Pod 동작 확인
-```
-kubectl get pods -n kube-flannel -o wide
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
 ```
 
-잠시 대기후 노드가 Running 상태로 바뀜
+위의 명령어를 실행하면 worker node를 클러스터에 가입하는데 사용할 수 있는 명령이 출력됩니다.
+
+예를 들어,
 ```
-kubectl get nodes
+
+kubeadm join 192.168.0.100:6443 --token abcdef.1234567890abcdef \
+--discovery-token-ca-cert-hash sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 ```
+이 명령어는 복사해두고 이후에 사용합니다.
 
-
-
-## 기타 사항
-
-### root 계정 외에 다른 계정에서 kubectl 커맨드 사용 가능 
+### 3.5.kubectl 구성
 ```
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-
-### 클러스터 조인 토큰 찾기 (기본 24 시간후 만료)
+### 3.6.CNI 설정(Flannel)
+kubernetes 클러스터에 Flannel을 배포합니다.
 ```
-kubeadm token list
-```
-
-만료되었다면
-```
-kubeadm token create
-```
-a
-
-### 클러스터 디스커버리 토큰 해시 찾기
-```
-openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 ```
 
-
-### Pod network addon
-* [마스터 노드에서만 실행] Pod가 서로 통신 할 수 있도록 CNI(Container Network Interface) 기반 Pod 네트워크 추가 기능을 구성합니다.
-
-* flannel (사용)
+### 3.7.worker node를 클러스터에 가입
+위에서 복사한 kubeadm join... 명령어를 worker node에서 실행합니다.
 ```
-# kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-
-podsecuritypolicy.policy/psp.flannel.unprivileged created
-clusterrole.rbac.authorization.k8s.io/flannel created
-clusterrolebinding.rbac.authorization.k8s.io/flannel created
-serviceaccount/flannel created
-configmap/kube-flannel-cfg created
-daemonset.apps/kube-flannel-ds-amd64 created
-daemonset.apps/kube-flannel-ds-arm64 created
-daemonset.apps/kube-flannel-ds-arm created
-daemonset.apps/kube-flannel-ds-ppc64le created
-daemonset.apps/kube-flannel-ds-s390x created
+kubectl get nodes
 ```
-* flannel이 설치되었는지 확인합니다.
-```
-$ kubectl get pod --namespace=kube-system -o wide
-NAME                                      READY   STATUS    RESTARTS   AGE     IP            NODE               NOMINATED NODE   READINESS GATES
-coredns-5644d7b6d9-wdt7j                  1/1     Running   4          7d17h   10.244.0.11   bsc-kube-master    <none>           <none>
-coredns-5644d7b6d9-x97vf                  1/1     Running   4          7d17h   10.244.0.10   bsc-kube-master    <none>           <none>
-etcd-bsc-kube-master                      1/1     Running   4          7d17h   10.0.2.15     bsc-kube-master    <none>           <none>
-kube-apiserver-bsc-kube-master            1/1     Running   4          7d17h   10.0.2.15     bsc-kube-master    <none>           <none>
-kube-controller-manager-bsc-kube-master   1/1     Running   4          7d17h   10.0.2.15     bsc-kube-master    <none>           <none>
-kube-flannel-ds-amd64-n7n7q               1/1     Running   4          7d17h   10.0.2.15     bsc-kube-master    <none>           <none>
-kube-flannel-ds-amd64-qbcwp               1/1     Running   5          7d17h   10.0.2.15     bsc-kube-worker    <none>           <none>
-kube-flannel-ds-amd64-qts5l               1/1     Running   1          3d22h   10.0.2.15     bsc-kube-worker2   <none>           <none>
-kube-proxy-9sw4k                          1/1     Running   5          7d17h   10.0.2.15     bsc-kube-worker    <none>           <none>ㅋ
-kube-proxy-b5hqc                          1/1     Running   4          7d17h   10.0.2.15     bsc-kube-master    <none>           <none>
-kube-proxy-m5npl                          1/1     Running   1          3d22h   10.0.2.15     bsc-kube-worker2   <none>           <none>
-kube-scheduler-bsc-kube-master            1/1     Running   4          7d17h   10.0.2.15     bsc-kube-master    <none>           <none>
+를 이용하여 status가 Ready로 바뀌는지 확인합니다.
 
-
-
-
-```
-* calico  (이전에 사용했었으나 불안정해서 flannel로 교체)
-```
-wget https://docs.projectcalico.org/manifests/calico.yaml
-kubectl apply -f calico.yaml
-
-# 정상 running 확인
-root@master:~# kubectl get pods -n kube-system
-NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
-kube-system   calico-kube-controllers-647d84984b-rbp5b   1/1     Running   0          4m45s
-kube-system   calico-node-gft4v                          1/1     Running   0          4m47s
-kube-system   coredns-64897985d-2ndcp                    1/1     Running   0          9m1s
-kube-system   coredns-64897985d-bn7r8                    1/1     Running   0          9m2s
-kube-system   etcd-master                                1/1     Running   0          9m20s
-kube-system   kube-apiserver-master                      1/1     Running   0          9m28s
-kube-system   kube-controller-manager-master             1/1     Running   0          9m20s
-kube-system   kube-proxy-bvcx9                           1/1     Running   0          9m2s
-kube-system   kube-scheduler-master                      1/1     Running   0          9m20s
-```
+[참고](https://velog.io/@chan9708/k8ssettings)
