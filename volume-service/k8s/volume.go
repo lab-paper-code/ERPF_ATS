@@ -18,13 +18,14 @@ const (
 	storageClassName      string = "rook-cephfs"
 )
 
-const JSONPatchType k8stypes.PatchType = "application/json-patch+json" // added for volume resize
+// added for volume resize
+const JSONPatchType k8stypes.PatchType = "application/json-patch+json"
 
 func (adapter *K8SAdapter) GetStorageClassName() string {
 	return storageClassName
 }
 
-func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string { // changed to avoid kubernetes error
+func (adapter *K8SAdapter) GetVolumeClaimName(volumeID string) string {
 	return makeValidObjectName(volumeClaimNamePrefix, volumeID)
 }
 
@@ -121,7 +122,7 @@ func (adapter *K8SAdapter) ResizeVolume(volumeID string, size int64) error {
 		return nil
 	}
 
-	// Create a patch to update the pvc size
+	// Create patch data to update the pvc size
 	patchData := []byte(fmt.Sprintf(`[{"op": "replace", "path": "/spec/resources/requests/storage", "value": "%d"}]`, size))
 
 	_, patchErr := pvcclient.Patch(ctx, pvc.Name, JSONPatchType, patchData, metav1.PatchOptions{})
@@ -147,7 +148,8 @@ func (adapter *K8SAdapter) DeleteVolume(volumeID string) error {
 	defer cancel()
 
 	pvcclient := adapter.clientSet.CoreV1().PersistentVolumeClaims(volumeNamespace)
-	deletePolicy := metav1.DeletePropagationForeground // change policy if needed
+	// change policy if needed
+	deletePolicy := metav1.DeletePropagationForeground
 
 	err := pvcclient.Delete(ctx, volumeClaimName, metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,

@@ -100,6 +100,7 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 		DockerImage string `json:"docker_image"`
 		Commands    string `json:"commands,omitempty"`
 		Arguments   string `json:"arguments,omitempty"`
+		Stateful    bool   `json:"stateful,omitempty"`
 		OpenPorts   []int  `json:"open_ports,omitempty"`
 	}
 
@@ -129,6 +130,7 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 		DockerImage: input.DockerImage,
 		Commands:    input.Commands,
 		Arguments:   input.Arguments,
+		Stateful:    input.Stateful,
 		OpenPorts:   input.OpenPorts,
 	}
 

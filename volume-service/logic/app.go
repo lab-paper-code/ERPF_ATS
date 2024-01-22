@@ -138,11 +138,17 @@ func (logic *Logic) TerminateAppRun(appRunID string) error {
 		return err
 	}
 
+	// added to provide Stateful field
+	app, err := logic.dbAdapter.GetApp(appRun.AppID)
+	if err != nil {
+		return err
+	}
+
 	if logic.config.NoKubernetes {
 		logger.Debug("bypass k8sAdapter.DeleteApp()")
 	} else {
 		logger.Debugf("stopping App Run %s for device %s, volume %s", appRun.ID, device.ID, volume.ID)
-		err = logic.k8sAdapter.DeleteApp(appRunID)
+		err = logic.k8sAdapter.DeleteApp(appRunID, app.Stateful) // add Stateful field
 		if err != nil {
 			return err
 		}

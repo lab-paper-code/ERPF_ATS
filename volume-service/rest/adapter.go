@@ -32,8 +32,9 @@ func Start(config *commons.Config, logik *logic.Logic) (*RESTAdapter, error) {
 	router := gin.Default()
 	router.Use(cors.New(
 		cors.Config{
-			AllowOrigins: []string{"http://155.230.36.27:5173", "http://155.230.36.27:5174", "http://155.230.36.27:4140", "http://155.230.36.27:4141"},
-			AllowMethods: []string{"POST", "GET", "PATCH", "DELETE", "OPTIONS", "HEAD"},
+			AllowOrigins: []string{"http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173", "http://127.0.0.1:5174",
+				"http://155.230.36.27:5173", "http://155.230.36.27:5174", "http://155.230.36.27:4140", "http://155.230.36.27:4141"},
+			AllowMethods: []string{"POST", "GET", "PATCH", "DELETE", "OPTIONS"},
 			AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
 			// allow headers
 			AllowCredentials: true,

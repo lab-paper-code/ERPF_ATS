@@ -41,6 +41,7 @@ func NewDeviceID() string {
 	return fmt.Sprintf("%s_%s", deviceIDPrefix, xid.New().String())
 }
 
+// TODO: check where to use this func
 func (device *Device) CheckAuthKey(authKey string) bool {
 	expectedAuthKey := GetAuthKey(device.ID, device.Password)
 	return expectedAuthKey == authKey

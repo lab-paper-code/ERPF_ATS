@@ -22,8 +22,9 @@ type App struct {
 	RequireGPU  bool      `json:"require_gpu,omitempty"`
 	Description string    `json:"description,omitempty"`
 	DockerImage string    `json:"docker_image"`
-	Commands    string    `json:"commands,omitempty"`   // a space-separated commands to run app, array/map not supported
+	Commands    string    `json:"commands,omitempty"`   // a space-separated commands to run when starting app, substitutes CMD(command) in dockerfile, array/map not supported
 	Arguments   string    `json:"arguments,omitempty"`  // a space-separated command-line arguments to run app, array/map not supported
+	Stateful    bool      `json:"stateful,omitempty"`   // flag for stateful apps, if true, create statefulset instead of deployment
 	OpenPorts   []int     `json:"open_ports,omitempty"` // first element is the main service port to open with ingress setup
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
@@ -36,8 +37,9 @@ type AppSQLiteObj struct {
 	RequireGPU  bool      `json:"require_gpu,omitempty"`
 	Description string    `json:"description,omitempty"`
 	DockerImage string    `json:"docker_image"`
-	Commands    string    `json:"commands,omitempty"`   // command to set in container
-	Arguments   string    `json:"arguments,omitempty"`  // arguments to use in container
+	Commands    string    `json:"commands,omitempty"`  // command to set in container
+	Arguments   string    `json:"arguments,omitempty"` // arguments to use in container
+	Stateful    bool      `json:"stateful,omitempty"`
 	OpenPorts   string    `json:"open_ports,omitempty"` // store it as a comma-separated string
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
@@ -60,6 +62,7 @@ func (app *App) ToAppSQLiteObj() AppSQLiteObj {
 		DockerImage: app.DockerImage,
 		Arguments:   app.Arguments,
 		Commands:    app.Commands,
+		Stateful:    app.Stateful,
 		OpenPorts:   openPortsCSV,
 		CreatedAt:   app.CreatedAt,
 		UpdatedAt:   app.UpdatedAt,
@@ -83,6 +86,7 @@ func (app *AppSQLiteObj) ToAppObj() App {
 		DockerImage: app.DockerImage,
 		Commands:    app.Commands,
 		Arguments:   app.Arguments,
+		Stateful:    app.Stateful,
 		OpenPorts:   openports,
 		CreatedAt:   app.CreatedAt,
 		UpdatedAt:   app.UpdatedAt,

@@ -16,18 +16,24 @@ import (
 )
 
 const (
-	appDeploymentNamePrefix string = "app"
-	appDeploymentNamespace  string = objectNamespace
-	appServiceNamePrefix    string = "app"
-	appServiceNamespace     string = objectNamespace
-	appIngressNamePrefix    string = "app"
-	appIngressNamespace     string = objectNamespace
+	appDeploymentNamePrefix  string = "app"
+	appDeploymentNamespace   string = objectNamespace
+	appStatefulSetNamePrefix string = "app"
+	appStatefulSetNamespace  string = objectNamespace
+	appServiceNamePrefix     string = "app"
+	appServiceNamespace      string = objectNamespace
+	appIngressNamePrefix     string = "app"
+	appIngressNamespace      string = objectNamespace
 
 	appContainerVolumeName  string = "app-storage"
 	appContainerPVMountPath string = "/uploads"
 )
 
 func (adapter *K8SAdapter) GetAppDeploymentName(appRunID string) string {
+	return makeValidObjectName(appDeploymentNamePrefix, appRunID)
+}
+
+func (adapter *K8SAdapter) GetAppStatefulSetName(appRunID string) string {
 	return makeValidObjectName(appDeploymentNamePrefix, appRunID)
 }
 
@@ -42,6 +48,16 @@ func (adapter *K8SAdapter) GetAppIngressName(appRunID string) string {
 func (adapter *K8SAdapter) getAppDeploymentLabels(appRun *types.AppRun) map[string]string {
 	labels := map[string]string{}
 	labels["app-name"] = adapter.GetAppDeploymentName(appRun.ID)
+	labels["app-id"] = appRun.AppID
+	labels["apprun-id"] = appRun.ID
+	labels["volume-id"] = appRun.VolumeID
+	labels["device-id"] = appRun.DeviceID
+	return labels
+}
+
+func (adapter *K8SAdapter) getAppStatefulSetLabels(appRun *types.AppRun) map[string]string {
+	labels := map[string]string{}
+	labels["app-name"] = adapter.GetAppStatefulSetName(appRun.ID)
 	labels["app-id"] = appRun.AppID
 	labels["apprun-id"] = appRun.ID
 	labels["volume-id"] = appRun.VolumeID
@@ -296,6 +312,94 @@ func (adapter *K8SAdapter) deleteAppDeployment(appRunID string) error {
 	return nil
 }
 
+func (adapter *K8SAdapter) createAppStatefulSet(device *types.Device, volume *types.Volume, app *types.App, appRun *types.AppRun) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8sAdapter",
+		"function": "createAppStatefulSet",
+	})
+
+	logger.Debug("received createAppStatefulSet()")
+
+	appStatefulSetName := adapter.GetAppStatefulSetName(appRun.ID)
+	appStatefulSetLabels := adapter.getAppStatefulSetLabels(appRun)
+	stsReplicas := int32(1)
+
+	appContainers := adapter.getAppContainers(app, device, volume)
+	appContainerVolumes := adapter.getAppContainerVolumes(volume)
+
+	statefulset := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      appStatefulSetName,
+			Labels:    appStatefulSetLabels,
+			Namespace: appStatefulSetNamespace,
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: &stsReplicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app-name": appStatefulSetName,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   appStatefulSetName,
+					Labels: appStatefulSetLabels,
+				},
+				Spec: apiv1.PodSpec{
+					Containers:    appContainers,
+					Volumes:       appContainerVolumes,
+					RestartPolicy: apiv1.RestartPolicyAlways,
+				}, //spec
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	statefulsetclient := adapter.clientSet.AppsV1().StatefulSets(appStatefulSetNamespace)
+	_, err := statefulsetclient.Get(ctx, statefulset.GetName(), metav1.GetOptions{})
+	if err != nil {
+		// does not exist
+		_, createErr := statefulsetclient.Create(ctx, statefulset, metav1.CreateOptions{})
+		if createErr != nil {
+			return createErr
+		}
+	} else {
+		// exist -> update
+		_, updateErr := statefulsetclient.Update(ctx, statefulset, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
+	}
+
+	return nil
+}
+
+func (adapter *K8SAdapter) deleteAppStatefulSet(appRunID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "deleteAppStatefulSet",
+	})
+
+	logger.Debug("received deleteAppStatefulSet()")
+
+	appStatefulSetName := adapter.GetAppStatefulSetName(appRunID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	statefulsetclient := adapter.clientSet.AppsV1().StatefulSets(appStatefulSetNamespace)
+	err := statefulsetclient.Delete(ctx, appStatefulSetName, *metav1.NewDeleteOptions(0)) // TODO: check how to gracefully delete staefulset
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
@@ -488,9 +592,18 @@ func (adapter *K8SAdapter) CreateApp(device *types.Device, volume *types.Volume,
 
 	logger.Debug("received CreateApp()")
 
-	err := adapter.createAppDeployment(device, volume, app, appRun)
-	if err != nil {
-		return err
+	var err error
+
+	if app.Stateful {
+		err := adapter.createAppStatefulSet(device, volume, app, appRun)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := adapter.createAppDeployment(device, volume, app, appRun)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = adapter.createAppService(app, appRun)
@@ -506,7 +619,7 @@ func (adapter *K8SAdapter) CreateApp(device *types.Device, volume *types.Volume,
 	return nil
 }
 
-func (adapter *K8SAdapter) DeleteApp(appRunID string) error {
+func (adapter *K8SAdapter) DeleteApp(appRunID string, stateful bool) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
 		"struct":   "K8SAdapter",
@@ -525,9 +638,16 @@ func (adapter *K8SAdapter) DeleteApp(appRunID string) error {
 		return err
 	}
 
-	err = adapter.deleteAppDeployment(appRunID)
-	if err != nil {
-		return err
+	if stateful {
+		err = adapter.deleteAppStatefulSet(appRunID)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = adapter.deleteAppDeployment(appRunID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
