@@ -12,6 +12,7 @@
         description: "",
         docker_image: "",
         arguments: "",
+        stateful: false,
         open_ports: [],
     };
 
@@ -111,13 +112,19 @@
             bind:value={appRegister.open_ports}
             placeholder="Enter Open Ports"
         />
-
         <label for="require_gpu">Require GPU:</label>
         <input
             type="checkbox"
             id="require_gpu"
             style=" margin-right: 10px;"
             bind:checked={appRegister.require_gpu}
+        />
+        <label for="stateful">Stateful:</label>
+            <input
+            type="checkbox"
+            id="stateful"
+            style=" margin-right: 10px;"
+            bind:checked={appRegister.stateful}
         />
         <button on:click={registerApp}>Register App</button>
     </form>
