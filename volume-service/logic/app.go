@@ -41,6 +41,18 @@ func (logic *Logic) CreateApp(app *types.App) error {
 	return logic.dbAdapter.InsertApp(app)
 }
 
+func (logic *Logic) DeleteApp(appID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "DeleteApp",
+	})
+
+	logger.Debug("received DeleteApp()")
+
+	return logic.dbAdapter.DeleteApp(appID)
+}
+
 func (logic *Logic) ListAppRuns(deviceID string) ([]types.AppRun, error) {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
@@ -138,7 +150,7 @@ func (logic *Logic) TerminateAppRun(appRunID string) error {
 		return err
 	}
 
-	// added to provide Stateful field
+	// added to delete StatefulSet
 	app, err := logic.dbAdapter.GetApp(appRun.AppID)
 	if err != nil {
 		return err
@@ -148,7 +160,7 @@ func (logic *Logic) TerminateAppRun(appRunID string) error {
 		logger.Debug("bypass k8sAdapter.DeleteApp()")
 	} else {
 		logger.Debugf("stopping App Run %s for device %s, volume %s", appRun.ID, device.ID, volume.ID)
-		err = logic.k8sAdapter.DeleteApp(appRunID, app.Stateful) // add Stateful field
+		err = logic.k8sAdapter.DeleteApp(appRunID, app.Stateful)
 		if err != nil {
 			return err
 		}

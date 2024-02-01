@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -15,10 +16,12 @@ func (adapter *RESTAdapter) setupDeviceRouter() {
 	// any devices can call these APIs
 	adapter.router.GET("/devices", adapter.basicAuthDeviceOrAdmin, adapter.handleListDevices)
 	adapter.router.GET("/devices/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetDevice)
+	adapter.router.POST("/devices", adapter.basicAuthAdmin, adapter.handleRegisterDevice)
 	adapter.router.PATCH("/devices/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUpdateDevice)
+	adapter.router.DELETE("/devices/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleDeleteDevice)
 
 	// any devices can call these APIs
-	adapter.router.POST("/devices", adapter.basicAuthAdmin, adapter.handleRegisterDevice)
+
 }
 
 func (adapter *RESTAdapter) handleListDevices(c *gin.Context) {
@@ -207,13 +210,15 @@ func (adapter *RESTAdapter) handleUpdateDevice(c *gin.Context) {
 	}
 
 	type deviceUpdateRequest struct {
-		IP       string `json:"ip,omitempty"`
-		Password string `json:"password,omitempty"`
+		IP          string `json:"ip,omitempty"`
+		Password    string `json:"password,omitempty"`
+		Description string `json:"description,omitempty"`
 	}
 
 	var input deviceUpdateRequest
 
 	err = c.BindJSON(&input)
+	fmt.Println(input)
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -243,6 +248,17 @@ func (adapter *RESTAdapter) handleUpdateDevice(c *gin.Context) {
 		}
 	}
 
+	if len(input.Description) > 0 {
+		// update password
+		err = adapter.logic.UpdateDeviceDescription(deviceID, input.Description)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
 	device, err := adapter.logic.GetDevice(deviceID)
 	if err != nil {
 		// fail
@@ -252,4 +268,52 @@ func (adapter *RESTAdapter) handleUpdateDevice(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, device.GetRedacted())
+}
+
+func (adapter *RESTAdapter) handleDeleteDevice(c *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"package":  "rest",
+		"struct":   "RESTAdapter",
+		"function": "handleDeleteDevice",
+	})
+
+	logger.Infof("access request to %s", c.Request.URL)
+
+	user := c.GetString(gin.AuthUserKey)
+	deviceID := c.Param("id")
+
+	err := types.ValidateDeviceID(deviceID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	device, err := adapter.logic.GetDevice(deviceID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !adapter.isAdminUser(user) {
+		err := xerrors.Errorf("failed to delete device %s, only admin can delete device", deviceID)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Debugf("Deleting Device ID: %s", deviceID)
+
+	err = adapter.logic.DeleteDevice(deviceID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, device)
 }

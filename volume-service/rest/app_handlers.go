@@ -15,10 +15,13 @@ func (adapter *RESTAdapter) setupAppRouter() {
 	adapter.router.GET("/apps", adapter.basicAuthDeviceOrAdmin, adapter.handleListApps)
 	adapter.router.GET("/apps/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetApp)
 	adapter.router.POST("/apps", adapter.basicAuthDeviceOrAdmin, adapter.handleCreateApp)
+	// adapter.router.PATCH("/apps/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUpdateApp)
+	adapter.router.DELETE("/apps/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleDeleteApp)
 
 	adapter.router.GET("/appruns", adapter.basicAuthDeviceOrAdmin, adapter.handleListAppRuns)
-	adapter.router.POST("/appruns/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleExecuteApp)
 	adapter.router.GET("/appruns/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetAppRun)
+	adapter.router.POST("/appruns/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleExecuteApp)
+	// adapter.router.PATCH("/apprunss/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUpdateAppRun)
 	adapter.router.DELETE("/appruns/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleTerminateAppRun)
 }
 
@@ -135,6 +138,54 @@ func (adapter *RESTAdapter) handleCreateApp(c *gin.Context) {
 	}
 
 	err = adapter.logic.CreateApp(&app)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, app)
+}
+
+func (adapter *RESTAdapter) handleDeleteApp(c *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"package":  "rest",
+		"struct":   "RESTAdapter",
+		"function": "handleDeleteApp",
+	})
+
+	logger.Infof("access request to %s", c.Request.URL)
+
+	user := c.GetString(gin.AuthUserKey)
+	appID := c.Param("id")
+
+	err := types.ValidateAppID(appID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	app, err := adapter.logic.GetApp(appID)
+	if err != nil {
+		// fail
+		logger.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !adapter.isAdminUser(user) {
+		err := xerrors.Errorf("failed to delete app %s, only admin can delete app", appID)
+		logger.Error(err)
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Debugf("Deleting App Run ID: %s", appID)
+
+	err = adapter.logic.DeleteApp(appID)
 	if err != nil {
 		// fail
 		logger.Error(err)

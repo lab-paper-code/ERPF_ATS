@@ -73,3 +73,42 @@ func (logic *Logic) UpdateDevicePassword(deviceID string, password string) error
 
 	return logic.dbAdapter.UpdateDevicePassword(deviceID, password)
 }
+
+func (logic *Logic) UpdateDeviceDescription(deviceID string, description string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateDeviceDescription",
+	})
+
+	logger.Debug("received UpdateDeviceDescription()")
+
+	return logic.dbAdapter.UpdateDeviceDescription(deviceID, description)
+}
+
+func (logic *Logic) DeleteDevice(deviceID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "DeleteDevice",
+	})
+
+	logger.Debug("received DeleteDevice()")
+
+	device, err := logic.GetDevice(deviceID)
+
+	if err != nil {
+		return err
+	}
+
+	if logic.config.NoKubernetes {
+		logger.Debug("bypass k8sAdapter.CreateSecret()")
+	} else {
+		err := logic.k8sAdapter.DeleteSecret(&device)
+		if err != nil {
+			return err
+		}
+	}
+
+	return logic.dbAdapter.DeleteDevice(deviceID)
+}

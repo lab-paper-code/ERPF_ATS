@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
@@ -69,7 +68,38 @@ func (adapter *K8SAdapter) CreateSecret(device *types.Device) error {
 		}
 	}
 
-	fmt.Println("Secret created")
+	logger.Debug("received CreateSecret()")
+
+	return nil
+
+}
+
+func (adapter *K8SAdapter) DeleteSecret(device *types.Device) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "k8s",
+		"struct":   "K8SAdapter",
+		"function": "DeleteSecret",
+	})
+
+	logger.Debug("received DeleteSecret()")
+
+	secretName := adapter.GetSecretName(device)
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	secretclient := adapter.clientSet.CoreV1().Secrets(secretNamespace)
+
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOptions := metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}
+
+	err := secretclient.Delete(ctx, secretName, deleteOptions)
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 

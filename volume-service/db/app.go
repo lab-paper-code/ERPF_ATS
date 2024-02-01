@@ -51,6 +51,21 @@ func (adapter *DBAdapter) InsertApp(app *types.App) error {
 	return nil
 }
 
+func (adapter *DBAdapter) DeleteApp(appID string) error {
+	var app types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Delete(&app)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected != 1 {
+		return xerrors.Errorf("failed to delete an app")
+	}
+
+	return nil
+}
+
 func (adapter *DBAdapter) ListAppRuns(deviceID string) ([]types.AppRun, error) {
 	appRuns := []types.AppRun{}
 	result := adapter.db.Where("device_id = ?", deviceID).Find(&appRuns)

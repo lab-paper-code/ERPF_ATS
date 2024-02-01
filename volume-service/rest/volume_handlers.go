@@ -18,7 +18,7 @@ const (
 	prometheusPort      = "30803"
 
 	queryTotalVolumeCapacity       = "sum(node_filesystem_avail_bytes) by (node)"
-	D                              = 100                // D: expected number of edge devices
+	D                              = 10                 // D: expected number of edge devices
 	volumeSizeMinimum        int64 = 1024 * 1024 * 1024 // 1GB
 )
 
@@ -277,6 +277,7 @@ func (adapter *RESTAdapter) handleUpdateVolume(c *gin.Context) {
 	var input volumeUpdateRequest
 
 	err = c.BindJSON(&input)
+	fmt.Println(input)
 	if err != nil {
 		// fail
 		logger.Error(err)

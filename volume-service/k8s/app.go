@@ -26,7 +26,7 @@ const (
 	appIngressNamespace      string = objectNamespace
 
 	appContainerVolumeName  string = "app-storage"
-	appContainerPVMountPath string = "/uploads"
+	appContainerPVMountPath string = "/var/lib/mysql" // must rollback to /uploads
 )
 
 func (adapter *K8SAdapter) GetAppDeploymentName(appRunID string) string {
@@ -421,6 +421,16 @@ func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun
 		})
 	}
 
+	// Prepare Selector based on stateful or stateless app
+	selector := map[string]string{
+		"app-name": adapter.GetAppDeploymentName(appRun.ID),
+	}
+	if app.Stateful {
+		selector = map[string]string{
+			"app-name": adapter.GetAppStatefulSetName(appRun.ID),
+		}
+	}
+
 	service := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      appServiceName,
@@ -428,11 +438,9 @@ func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun
 			Namespace: appServiceNamespace,
 		},
 		Spec: apiv1.ServiceSpec{
-			Ports: servicePorts,
-			Selector: map[string]string{
-				"app-name": adapter.GetAppDeploymentName(appRun.ID),
-			},
-			Type: apiv1.ServiceTypeClusterIP,
+			Ports:    servicePorts,
+			Selector: selector,
+			Type:     apiv1.ServiceTypeClusterIP,
 		},
 	}
 
