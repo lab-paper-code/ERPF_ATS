@@ -14,79 +14,17 @@ import (
 )
 
 const (
-	prometheusServiceIP       = "155.230.36.27"
-	prometheusPort            = "30803"
-	query                     = "sum(node_filesystem_avail_bytes) by (node)"
-	volumeSizeMinimum   int64 = 1024 * 1024 * 1024 // 1GB
+	prometheusServiceIP = "155.230.36.27" // change according to prometheus settings
+	prometheusPort      = "30803"
+
+	queryTotalVolumeCapacity       = "sum(node_filesystem_avail_bytes) by (node)"
+	D                              = 100                // D: expected number of edge devices
+	volumeSizeMinimum        int64 = 1024 * 1024 * 1024 // 1GB
 )
-
-var (
-	currentTotalVolumeSizeAvail, volumeErr = getAvailVolumeSize()
-	D                                      = 100
-	currentVolumeSizeAvail                 = int64(currentTotalVolumeSizeAvail / D)
-)
-
-func initializeVolumeInfo() {
-	// Call getAvailVolumeSize() when setupVolumeRouter()
-	fmt.Print(currentVolumeSizeAvail)
-	// Handle the error if necessary
-	if volumeErr != nil {
-		// Handle the error, for example, print it or log it.
-		fmt.Println("Error:", volumeErr)
-	}
-}
-
-func getAvailVolumeSize() (int, error) {
-	url := fmt.Sprintf("http://%s:%s/api/v1/query", prometheusServiceIP, prometheusPort)
-	data := map[string]string{"query": query}
-
-	client := resty.New()
-	resp, err := client.R().
-		SetFormData(data).
-		Post(url)
-
-	if err != nil {
-		return 0, err
-	}
-
-	if resp.StatusCode() == http.StatusOK {
-		var responseData map[string]interface{}
-		if err := json.Unmarshal(resp.Body(), &responseData); err != nil {
-			return 0, err
-		}
-
-		// Assuming the numbers are in a field called "values"
-		result := responseData["data"].(map[string]interface{})["result"].([]interface{})
-		sum := 0
-
-		for _, value := range result {
-			data := value.(map[string]interface{})["value"].([]interface{})
-
-			// Adjust the index or key based on your JSON structure
-			if len(data) >= 2 {
-				// Check if the value at index 1 is a float64 or a string
-				if num, ok := data[1].(float64); ok {
-					sum += int(num)
-				} else if numStr, ok := data[1].(string); ok {
-					num, err := strconv.ParseFloat(numStr, 64)
-					if err != nil {
-						return 0, err
-					}
-					sum += int(num)
-				}
-			}
-		}
-
-		return sum, nil
-	}
-
-	return 0, fmt.Errorf("failed to execute the query. Status code: %d", resp.StatusCode())
-}
 
 // setupVolumeRouter setup http request router for volume
 func (adapter *RESTAdapter) setupVolumeRouter() {
-	// initialize currentTotalVolumeSizeAvail
-	initializeVolumeInfo()
+	// initialize currentTotalVolumeCapacity
 	// any devices can call these APIs
 	adapter.router.GET("/volumes", adapter.basicAuthDeviceOrAdmin, adapter.handleListVolumes)
 	adapter.router.GET("/volumes/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleGetVolume)
@@ -96,6 +34,53 @@ func (adapter *RESTAdapter) setupVolumeRouter() {
 
 	adapter.router.POST("/mounts/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleMountVolume)
 	adapter.router.DELETE("/mounts/:id", adapter.basicAuthDeviceOrAdmin, adapter.handleUnmountVolume)
+}
+
+func getAvailVolumeSize() int {
+	url := fmt.Sprintf("http://%s:%s/api/v1/query", prometheusServiceIP, prometheusPort)
+	data := map[string]string{"query": queryTotalVolumeCapacity}
+
+	client := resty.New() // create rest client to send prometheus request
+	// ask for available capacity
+	resp, err := client.R().
+		SetFormData(data).
+		Post(url)
+
+	if err != nil {
+		return 0
+	}
+
+	// error check
+	if resp.StatusCode() == http.StatusOK {
+		var responseData map[string]interface{}
+		if err := json.Unmarshal(resp.Body(), &responseData); err != nil {
+			return 0
+		}
+
+		// assuming the numbers are in a field called "values"
+		result := responseData["data"].(map[string]interface{})["result"].([]interface{})
+		sum := 0
+
+		for _, value := range result {
+			data := value.(map[string]interface{})["value"].([]interface{})
+			if len(data) >= 2 {
+				// check if the value at index 1 is a float64 or a string
+				if num, ok := data[1].(float64); ok {
+					sum += int(num)
+				} else if numStr, ok := data[1].(string); ok {
+					num, err := strconv.ParseFloat(numStr, 64)
+					if err != nil {
+						return 0
+					}
+					sum += int(num)
+				}
+			}
+		}
+
+		return sum
+	}
+
+	return 0
 }
 
 func (adapter *RESTAdapter) handleListVolumes(c *gin.Context) {
@@ -217,24 +202,22 @@ func (adapter *RESTAdapter) handleCreateVolume(c *gin.Context) {
 		return
 	}
 
+	currentTotalVolumeCapacity := getAvailVolumeSize()
+	currentVolumeAvail := int64(currentTotalVolumeCapacity / D)
+
+	fmt.Println("Total Cap: ", currentTotalVolumeCapacity/(1024*1024*1024), "GB")
+	fmt.Println("Current Avail: ", currentVolumeAvail/(1024*1024*1024), "GB")
+
 	volumeSizeNum := types.SizeStringToNum(input.VolumeSize)
 	if volumeSizeNum < volumeSizeMinimum {
 		logger.Debugf("you cannot give volume size lesser than %d, set to %d", volumeSizeMinimum, volumeSizeMinimum)
 		volumeSizeNum = volumeSizeMinimum
 	}
 
-	// check for available volumesize
-	currentTotalVolumeSizeAvail, volumeErr = getAvailVolumeSize()
-	if volumeErr != nil {
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// if user request exceeds available volumesize, set to currentVolumeSizeAvail
-	if volumeSizeNum > currentVolumeSizeAvail {
-		logger.Debugf("you cannot give volume size more than %d, set to %d", currentVolumeSizeAvail, currentVolumeSizeAvail)
-		volumeSizeNum = currentVolumeSizeAvail
+	// if user request exceeds available volumesize, set to currentVolumeAvail
+	if volumeSizeNum > currentVolumeAvail {
+		logger.Debugf("you cannot give volume size more than %d, set to %d", currentVolumeAvail, currentVolumeAvail)
+		volumeSizeNum = currentVolumeAvail
 	}
 
 	volume := types.Volume{
@@ -309,6 +292,9 @@ func (adapter *RESTAdapter) handleUpdateVolume(c *gin.Context) {
 		return
 	}
 
+	currentTotalVolumeCapacity := getAvailVolumeSize()
+	currentVolumeAvail := int64(currentTotalVolumeCapacity / D)
+
 	// resize
 	volumeSizeNum := types.SizeStringToNum(input.VolumeSize)
 	if volumeSizeNum < volumeSizeMinimum {
@@ -316,18 +302,10 @@ func (adapter *RESTAdapter) handleUpdateVolume(c *gin.Context) {
 		volumeSizeNum = volumeSizeMinimum
 	}
 
-	// check for available volumesize
-	currentTotalVolumeSizeAvail, volumeErr = getAvailVolumeSize()
-	if volumeErr != nil {
-		logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// if user request exceeds available volumesize, set to currentVolumeSizeAvail
-	if volumeSizeNum > currentVolumeSizeAvail {
-		logger.Debugf("you cannot give volume size more than %d, set to %d", currentVolumeSizeAvail, currentVolumeSizeAvail)
-		volumeSizeNum = currentVolumeSizeAvail
+	// if user request exceeds available volume size, set to currentVolumeAvail
+	if volumeSizeNum > currentVolumeAvail {
+		logger.Debugf("you cannot give volume size more than %d, set to %d", currentVolumeAvail, currentVolumeAvail)
+		volumeSizeNum = currentVolumeAvail
 	}
 
 	volume, err := adapter.logic.GetVolume(volumeID)
@@ -507,6 +485,7 @@ func (adapter *RESTAdapter) handleUnmountVolume(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	/*
 		type volumeUnmountRequest struct {
 			// define input required
