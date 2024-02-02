@@ -41,6 +41,102 @@ func (logic *Logic) CreateApp(app *types.App) error {
 	return logic.dbAdapter.InsertApp(app)
 }
 
+func (logic *Logic) UpdateAppName(appID string, name string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateApp",
+	})
+
+	logger.Debug("received UpdateAppName()")
+
+	return logic.dbAdapter.UpdateAppName(appID, name)
+}
+
+func (logic *Logic) UpdateAppRequireGPU(appID string, requireGPU bool) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateAppRequireGPU",
+	})
+
+	logger.Debug("received UpdateAppRequireGPU()")
+
+	return logic.dbAdapter.UpdateAppRequireGPU(appID, requireGPU)
+}
+
+func (logic *Logic) UpdateAppDescription(appID string, description string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateAppDescription",
+	})
+
+	logger.Debug("received UpdateAppDescription()")
+
+	return logic.dbAdapter.UpdateAppDescription(appID, description)
+}
+
+func (logic *Logic) UpdateAppDockerImage(appID string, dockerImage string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateAppDockerImage",
+	})
+
+	logger.Debug("received UpdateAppDockerImage()")
+
+	return logic.dbAdapter.UpdateAppDockerImage(appID, dockerImage)
+}
+
+func (logic *Logic) UpdateAppCommands(appID string, commands string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateAppCommands",
+	})
+
+	logger.Debug("received UpdateAppCommands()")
+
+	return logic.dbAdapter.UpdateAppCommands(appID, commands)
+}
+
+func (logic *Logic) UpdateAppArguments(appID string, arguments string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateAppArguments",
+	})
+
+	logger.Debug("received UpdateAppArguments()")
+
+	return logic.dbAdapter.UpdateAppArguments(appID, arguments)
+}
+
+func (logic *Logic) UpdateAppStateful(appID string, stateful bool) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateAppStateful",
+	})
+
+	logger.Debug("received UpdateAppStateful()")
+
+	return logic.dbAdapter.UpdateAppStateful(appID, stateful)
+}
+
+func (logic *Logic) UpdateAppOpenPorts(appID string, openPorts string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateAppOpenPorts",
+	})
+
+	logger.Debug("received UpdateAppOpenPorts()")
+
+	return logic.dbAdapter.UpdateAppOpenPorts(appID, openPorts)
+}
+
 func (logic *Logic) DeleteApp(appID string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "logic",
@@ -124,6 +220,49 @@ func (logic *Logic) ExecuteApp(appRun *types.AppRun) error {
 	}
 
 	return logic.dbAdapter.InsertAppRun(appRun)
+}
+
+func (logic *Logic) UpdateAppRun(appRunID string, appID string, deviceID string, volumeID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateAppRun",
+	})
+
+	logger.Debug("received UpdateAppRun()")
+
+	appRun, err := logic.dbAdapter.GetAppRun(appRunID)
+	if err != nil {
+		return err
+	}
+
+	app, err := logic.GetApp(appRun.AppID)
+	if err != nil {
+		return err
+	}
+
+	device, err := logic.dbAdapter.GetDevice(appRun.DeviceID)
+	if err != nil {
+		return err
+	}
+
+	volume, err := logic.dbAdapter.GetVolume(appRun.VolumeID)
+	if err != nil {
+		return err
+	}
+
+	if logic.config.NoKubernetes {
+		logger.Debug("bypass k8sAdapter.DeleteApp()")
+	} else {
+		logger.Debugf("updating App Run %s for device %s, volume %s, app %s", appRun.ID, device.ID, volume.ID, app.ID)
+		err = logic.k8sAdapter.UpdateAppRun(&device, &volume, &app, &appRun)
+		if err != nil {
+			return err
+		}
+	}
+
+	return logic.dbAdapter.UpdateAppRun(appRunID, appID, deviceID, volumeID)
+
 }
 
 func (logic *Logic) TerminateAppRun(appRunID string) error {

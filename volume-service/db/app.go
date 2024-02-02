@@ -51,6 +51,134 @@ func (adapter *DBAdapter) InsertApp(app *types.App) error {
 	return nil
 }
 
+func (adapter *DBAdapter) UpdateAppName(appID string, name string) error {
+	var record types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.Name = name
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateAppRequireGPU(appID string, requireGPU bool) error {
+	var record types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.RequireGPU = requireGPU
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateAppDescription(appID string, description string) error {
+	var record types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.Description = description
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateAppDockerImage(appID string, dockerImage string) error {
+	var record types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.DockerImage = dockerImage
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateAppCommands(appID string, commands string) error {
+	var record types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.Commands = commands
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateAppArguments(appID string, arguments string) error {
+	var record types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.Arguments = arguments
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateAppStateful(appID string, stateful bool) error {
+	var record types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.Stateful = stateful
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateAppOpenPorts(appID string, openPorts string) error {
+	var record types.AppSQLiteObj
+	result := adapter.db.Where("id = ?", appID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.OpenPorts = openPorts
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateAppRun(appRunID string, appID string, deviceID string, volumeID string) error {
+	var record types.AppRun
+	result := adapter.db.Where("id = ?", appRunID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.AppID = appID
+	record.DeviceID = deviceID
+	record.VolumeID = volumeID
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
 func (adapter *DBAdapter) DeleteApp(appID string) error {
 	var app types.AppSQLiteObj
 	result := adapter.db.Where("id = ?", appID).Delete(&app)
