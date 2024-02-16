@@ -513,7 +513,7 @@ func (adapter *RESTAdapter) handleUpdateAppRun(c *gin.Context) {
 		return
 	}
 
-	err = adapter.logic.UpdateAppRun(appRunID, appRun.AppID, appRun.DeviceID, appRun.VolumeID)
+	err = adapter.logic.UpdateAppRun(appRunID, input.AppID, input.DeviceID, input.VolumeID)
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -597,6 +597,7 @@ func (adapter *RESTAdapter) handleExecuteApp(c *gin.Context) {
 		AppID:    appID,
 	}
 
+	// set deviceID for appRun
 	if adapter.isAdminUser(user) {
 		appRun.DeviceID = input.DeviceID
 	} else {

@@ -30,7 +30,7 @@ type App struct {
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
 }
 
-// App represents an app, holding all necessary info. about app
+// AppSQLiteObj  an app, holding all necessary info. about app
 type AppSQLiteObj struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
 	Name        string    `json:"name"`

@@ -236,25 +236,26 @@ func (logic *Logic) UpdateAppRun(appRunID string, appID string, deviceID string,
 		return err
 	}
 
-	app, err := logic.GetApp(appRun.AppID)
+	app, err := logic.GetApp(appID)
 	if err != nil {
 		return err
 	}
 
-	device, err := logic.dbAdapter.GetDevice(appRun.DeviceID)
+	device, err := logic.dbAdapter.GetDevice(deviceID)
 	if err != nil {
 		return err
 	}
 
-	volume, err := logic.dbAdapter.GetVolume(appRun.VolumeID)
+	volume, err := logic.dbAdapter.GetVolume(volumeID)
 	if err != nil {
 		return err
 	}
 
 	if logic.config.NoKubernetes {
-		logger.Debug("bypass k8sAdapter.DeleteApp()")
+		logger.Debug("bypass k8sAdapter.UpdateAppRun()")
 	} else {
-		logger.Debugf("updating App Run %s for device %s, volume %s, app %s", appRun.ID, device.ID, volume.ID, app.ID)
+		logger.Debugf("updating AppRun %s for device %s, volume %s, app %s",
+			appRun.ID, device.ID, volume.ID, app.ID)
 		err = logic.k8sAdapter.UpdateAppRun(&device, &volume, &app, &appRun)
 		if err != nil {
 			return err

@@ -97,17 +97,18 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 			ContainerPort: int32(port),
 		})
 	}
-	gpuFlag := "0"
-	// set to 1 if app requires GPU
-	if app.RequireGPU {
-		gpuFlag = "1"
-	}
 
 	cmdString := app.Commands
 	commands := strings.Split(cmdString, " ")
 
 	argString := app.Arguments
 	arguments := strings.Split(argString, " ")
+
+	gpuFlag := "0"
+	// set to 1 if app requires GPU
+	if app.RequireGPU {
+		gpuFlag = "1"
+	}
 
 	// Create a container object
 	container := apiv1.Container{
@@ -130,6 +131,7 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 	if cmdString != "" {
 		container.Command = commands
 	}
+
 	if argString != "" {
 		container.Args = arguments
 	}
@@ -145,67 +147,6 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 
 	return []apiv1.Container{container}
 }
-
-/*
-func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device, volume *types.Volume) []apiv1.Container {
-	containerPorts := []apiv1.ContainerPort{}
-	for _, port := range app.OpenPorts {
-		containerPorts = append(containerPorts, apiv1.ContainerPort{
-			Name:          fmt.Sprintf("cont-port-%d", port),
-			ContainerPort: int32(port),
-		})
-	}
-	gpuFlag := "0"
-	// set to 1 if app requires GPU
-	if app.RequireGPU {
-		gpuFlag = "1"
-
-	}
-
-	cmdString := app.Commands
-
-	commands := strings.Split(cmdString, " ")
-	// split commands into slice
-
-	argString := app.Arguments
-	// variable to store app.Arguments
-
-	arguments := strings.Split(argString, " ")
-	// split arguments into slice
-
-
-
-	return []apiv1.Container{
-		{
-			Name:            "app",
-			Image:           app.DockerImage,
-			ImagePullPolicy: "IfNotPresent",
-			Ports:           containerPorts,
-
-			VolumeMounts: []apiv1.VolumeMount{
-				{
-					Name:      appContainerVolumeName,
-					MountPath: appContainerPVMountPath,
-				},
-			},
-			Resources: apiv1.ResourceRequirements{
-				Limits: apiv1.ResourceList{
-					"nvidia.com/gpu": resource.MustParse(gpuFlag),
-				},
-			},
-			// add command to container
-			Command: commands,
-
-			// add argument to container
-			Args: arguments,
-
-			SecurityContext: &apiv1.SecurityContext{
-				Privileged: pointer.Bool(true),
-			},
-		},
-	}
-}
-*/
 
 func (adapter *K8SAdapter) getAppContainerVolumes(volume *types.Volume) []apiv1.Volume {
 	pvcName := adapter.GetVolumeClaimName(volume.ID)
@@ -294,50 +235,32 @@ func (adapter *K8SAdapter) updateAppDeployment(device *types.Device, volume *typ
 
 	appDeploymentName := adapter.GetAppDeploymentName(appRun.ID)
 	appDeploymentLabels := adapter.getAppDeploymentLabels(appRun)
-	deployReplicas := int32(1)
+	// update labels
+	appDeploymentLabels["app-id"] = app.ID
+	appDeploymentLabels["device-id"] = device.ID
+	appDeploymentLabels["volume-id"] = volume.ID
 
 	appContainers := adapter.getAppContainers(app, device, volume)
 	appContainerVolumes := adapter.getAppContainerVolumes(volume)
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      appDeploymentName,
-			Labels:    appDeploymentLabels,
-			Namespace: appDeploymentNamespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &deployReplicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app-name": appDeploymentName,
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   appDeploymentName,
-					Labels: appDeploymentLabels,
-				},
-				Spec: apiv1.PodSpec{
-					Containers:    appContainers,
-					Volumes:       appContainerVolumes,
-					RestartPolicy: apiv1.RestartPolicyAlways,
-				}, //spec
-			},
-		},
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
 	deploymentclient := adapter.clientSet.AppsV1().Deployments(appDeploymentNamespace)
-	_, err := deploymentclient.Get(ctx, deployment.GetName(), metav1.GetOptions{})
+	existingDeployment, err := deploymentclient.Get(ctx, appDeploymentName, metav1.GetOptions{})
+
+	existingDeployment.ObjectMeta.Labels = appDeploymentLabels
+	existingDeployment.Spec.Template.ObjectMeta.Labels = appDeploymentLabels
+	existingDeployment.Spec.Template.Spec.Containers = appContainers
+	existingDeployment.Spec.Template.Spec.Volumes = appContainerVolumes
+
 	// does not exist -> cannot update
 	if err != nil {
 		return err
 	}
 
 	// exist -> update
-	_, updateErr := deploymentclient.Update(ctx, deployment, metav1.UpdateOptions{})
+	_, updateErr := deploymentclient.Update(ctx, existingDeployment, metav1.UpdateOptions{})
 	if updateErr != nil {
 		return updateErr
 	}
@@ -438,6 +361,11 @@ func (adapter *K8SAdapter) updateAppStatefulSet(device *types.Device, volume *ty
 
 	appStatefulSetName := adapter.GetAppStatefulSetName(appRun.ID)
 	appStatefulSetLabels := adapter.getAppStatefulSetLabels(appRun)
+	// update labels
+	appStatefulSetLabels["app-id"] = app.ID
+	appStatefulSetLabels["device-id"] = device.ID
+	appStatefulSetLabels["volume-id"] = volume.ID
+
 	stsReplicas := int32(1)
 
 	appContainers := adapter.getAppContainers(app, device, volume)
@@ -572,7 +500,7 @@ func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun
 	return nil
 }
 
-func (adapter *K8SAdapter) updateAppService(app *types.App, appRun *types.AppRun) error {
+func (adapter *K8SAdapter) updateAppService(device *types.Device, volume *types.Volume, app *types.App, appRun *types.AppRun) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
 		"struct":   "K8sAdapter",
@@ -583,15 +511,19 @@ func (adapter *K8SAdapter) updateAppService(app *types.App, appRun *types.AppRun
 
 	appServiceName := adapter.GetAppServiceName(appRun.ID)
 	appServiceLabels := adapter.getAppServiceLabels(appRun)
+	// update labels
+	appServiceLabels["app-id"] = app.ID
+	appServiceLabels["device-id"] = device.ID
+	appServiceLabels["volume-id"] = volume.ID
 
-	// servicePorts := []apiv1.ServicePort{}
-	// for _, port := range app.OpenPorts {
-	// 	servicePorts = append(servicePorts, apiv1.ServicePort{
-	// 		Name:     fmt.Sprintf("svc-port-%d", port),
-	// 		Port:     int32(port),
-	// 		Protocol: apiv1.ProtocolTCP,
-	// 	})
-	// }
+	servicePorts := []apiv1.ServicePort{}
+	for _, port := range app.OpenPorts {
+		servicePorts = append(servicePorts, apiv1.ServicePort{
+			Name:     fmt.Sprintf("svc-port-%d", port),
+			Port:     int32(port),
+			Protocol: apiv1.ProtocolTCP,
+		})
+	}
 
 	// prepare selector based on stateful or stateless app
 	selector := map[string]string{
@@ -626,6 +558,7 @@ func (adapter *K8SAdapter) updateAppService(app *types.App, appRun *types.AppRun
 	}
 
 	existingService.ObjectMeta.Labels = appServiceLabels
+	existingService.Spec.Ports = servicePorts
 	existingService.Spec.Selector = selector
 
 	// exist -> update
@@ -734,7 +667,7 @@ func (adapter *K8SAdapter) createAppIngress(app *types.App, appRun *types.AppRun
 	return nil
 }
 
-func (adapter *K8SAdapter) updateAppIngress(app *types.App, appRun *types.AppRun) error {
+func (adapter *K8SAdapter) updateAppIngress(device *types.Device, volume *types.Volume, app *types.App, appRun *types.AppRun) error {
 
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
@@ -746,6 +679,10 @@ func (adapter *K8SAdapter) updateAppIngress(app *types.App, appRun *types.AppRun
 
 	appIngressName := adapter.GetAppIngressName(appRun.ID)
 	appIngressLabels := adapter.getAppIngressLabels(appRun)
+	// update labels
+	appIngressLabels["app-id"] = app.ID
+	appIngressLabels["device-id"] = device.ID
+	appIngressLabels["volume-id"] = volume.ID
 
 	pathPrefix := networkingv1.PathTypePrefix
 
@@ -845,15 +782,13 @@ func (adapter *K8SAdapter) CreateApp(device *types.Device, volume *types.Volume,
 	var err error
 
 	if app.Stateful {
-		err := adapter.createAppStatefulSet(device, volume, app, appRun)
-		if err != nil {
-			return err
-		}
+		err = adapter.createAppStatefulSet(device, volume, app, appRun)
+
 	} else {
-		err := adapter.createAppDeployment(device, volume, app, appRun)
-		if err != nil {
-			return err
-		}
+		err = adapter.createAppDeployment(device, volume, app, appRun)
+	}
+	if err != nil {
+		return err
 	}
 
 	err = adapter.createAppService(app, appRun)
@@ -873,31 +808,29 @@ func (adapter *K8SAdapter) UpdateAppRun(device *types.Device, volume *types.Volu
 	logger := log.WithFields(log.Fields{
 		"package":  "k8s",
 		"struct":   "K8SAdapter",
-		"function": "UpdateApp",
+		"function": "UpdateAppRun",
 	})
 
-	logger.Debug("received UpdateApp()")
+	logger.Debug("received UpdateAppRun()")
 
 	var err error
 
 	if app.Stateful {
-		err := adapter.updateAppStatefulSet(device, volume, app, appRun)
-		if err != nil {
-			return err
-		}
+		err = adapter.updateAppStatefulSet(device, volume, app, appRun)
 	} else {
-		err := adapter.updateAppDeployment(device, volume, app, appRun)
-		if err != nil {
-			return err
-		}
+		err = adapter.updateAppDeployment(device, volume, app, appRun)
 	}
 
-	err = adapter.updateAppService(app, appRun)
 	if err != nil {
 		return err
 	}
 
-	err = adapter.updateAppIngress(app, appRun)
+	err = adapter.updateAppService(device, volume, app, appRun)
+	if err != nil {
+		return err
+	}
+
+	err = adapter.updateAppIngress(device, volume, app, appRun)
 	if err != nil {
 		panic(err)
 	}
@@ -926,14 +859,12 @@ func (adapter *K8SAdapter) DeleteApp(appRunID string, stateful bool) error {
 
 	if stateful {
 		err = adapter.deleteAppStatefulSet(appRunID)
-		if err != nil {
-			return err
-		}
 	} else {
 		err = adapter.deleteAppDeployment(appRunID)
-		if err != nil {
-			return err
-		}
+	}
+
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -952,49 +883,6 @@ func (adapter *K8SAdapter) EnsureDeleteApp(appRunID string) {
 	adapter.deleteAppService(appRunID)
 	adapter.deleteAppDeployment(appRunID)
 }
-
-/*
-
-func (adapter *K8SAdapter) sendAppCommand(podName string, command ...string) error {
-	logger := log.WithFields(log.Fields{
-		"package":  "k8s",
-		"struct":   "K8SAdapter",
-		"function": "sendAppCommand",
-	})
-
-	logger.Debug("received sendAppCommand()")
-
-	args := append([]string{"exec", "-it", podName, "--"}, command...)
-
-	cmd := exec.Command("kubectl", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	return cmd.Run()
-}
-
-func (adapter *K8SAdapter) ExecuteAppCommand(appRunID string) {
-	logger := log.WithFields(log.Fields{
-		"package":  "k8s",
-		"struct":   "K8SAdapter",
-		"function": "ExecAppCmd",
-	})
-
-	logger.Debug("received ExecuteAppCommand()")
-
-	podName := appRunID // get podName with appRunID
-	command := []string{"bash"}
-
-	err := adapter.sendAppCommand(podName, command...)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-	} else {
-		fmt.Println("Command executed successfully!")
-	}
-
-}
-*/
 
 /*
    //TODO:  k8s resource들 생성한 후
