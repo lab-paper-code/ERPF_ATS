@@ -42,56 +42,45 @@ func (logic *Logic) CreateDevice(device *types.Device) error {
 	return logic.dbAdapter.InsertDevice(device)
 }
 
-// func (logic *Logic) UpdateDeviceIP(deviceID string, ip string) error {
-// 	logger := log.WithFields(log.Fields{
-// 		"package":  "logic",
-// 		"struct":   "Logic",
-// 		"function": "UpdateDeviceIP",
-// 	})
+func (logic *Logic) UpdateDeviceEndpoint(deviceID string, endpoint string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateDeviceIP",
+	})
 
-// 	logger.Debug("received UpdateDeviceIP()")
+	logger.Debug("received UpdateDeviceIP()")
 
-// 	return logic.dbAdapter.UpdateDeviceIP(deviceID, ip)
-// }
+	return logic.dbAdapter.UpdateDeviceEndpoint(deviceID, endpoint)
+}
 
-// func (logic *Logic) UpdateDevicePassword(deviceID string, password string) error {
-// 	logger := log.WithFields(log.Fields{
-// 		"package":  "logic",
-// 		"struct":   "Logic",
-// 		"function": "UpdateDevicePassword",
-// 	})
+func (logic *Logic) UpdateDeviceDescription(deviceID string, description string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "UpdateDeviceDescription",
+	})
 
-// 	logger.Debug("received UpdateDevicePassword()")
+	logger.Debug("received UpdateDeviceDescription()")
 
-// 	return logic.dbAdapter.UpdateDevicePassword(deviceID, password)
-// }
+	return logic.dbAdapter.UpdateDeviceDescription(deviceID, description)
+}
 
-// func (logic *Logic) UpdateDeviceDescription(deviceID string, description string) error {
-// 	logger := log.WithFields(log.Fields{
-// 		"package":  "logic",
-// 		"struct":   "Logic",
-// 		"function": "UpdateDeviceDescription",
-// 	})
+func (logic *Logic) DeleteDevice(deviceID string) error {
+	logger := log.WithFields(log.Fields{
+		"package":  "logic",
+		"struct":   "Logic",
+		"function": "DeleteDevice",
+	})
 
-// 	logger.Debug("received UpdateDeviceDescription()")
+	logger.Debug("received DeleteDevice()")
 
-// 	return logic.dbAdapter.UpdateDeviceDescription(deviceID, description)
-// }
+	device, err := logic.GetDevice(deviceID)
 
-// func (logic *Logic) DeleteDevice(deviceID string) error {
-// 	logger := log.WithFields(log.Fields{
-// 		"package":  "logic",
-// 		"struct":   "Logic",
-// 		"function": "DeleteDevice",
-// 	})
-
-// 	logger.Debug("received DeleteDevice()")
-
-// 	device, err := logic.GetDevice(deviceID)
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return logic.dbAdapter.DeleteDevice(deviceID)
-// }
+	if err != nil {
+		log.Error("%s does not exist, cannot delete device", device)
+		return err
+	}
+	
+	return logic.dbAdapter.DeleteDevice(deviceID)
+}

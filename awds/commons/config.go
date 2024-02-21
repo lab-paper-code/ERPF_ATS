@@ -11,8 +11,6 @@ import (
 )
 
 const (
-	defaultRestAdminUsername string = "admin"
-	defaultRestAdminPassword string = "letmein"
 	defaultRestPort          int    = 10270 
 	defaultLogLevel          string = "fatal"
 	defaultDBUsername        string = "root"

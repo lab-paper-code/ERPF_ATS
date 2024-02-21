@@ -5,7 +5,6 @@ import (
 	"awds/db"
 	"awds/logic"
 	"awds/rest"
-	"awds/schedule"
 	"fmt"
 	"os"
 	"os/signal"
@@ -53,19 +52,19 @@ func processCommand(command *cobra.Command, args []string) error {
 	defer dbAdapter.Stop()
 	logger.Info("DB Adapter Started")
 
+	// logger.Info("Starting Scheduler...")
+	// scheduler, err := schedule.Start(config)
+	// if err != nil {
+	// 	logger.Fatal(err)
+	// }
+	// defer scheduler.Stop()
+	// logger.Info("Scheduler Started")
+	
 	logik, err := logic.Start(config, dbAdapter)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	defer logik.Stop()
-
-	logger.Info("Starting Scheduler...")
-	scheduler, err := schedule.Start(config, dbAdapter)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	defer scheduler.Stop()
-	logger.Info("Scheduler Started")
 
 	logger.Info("Starting REST Adapter...")
 	restAdapter, err := rest.Start(config, logik)

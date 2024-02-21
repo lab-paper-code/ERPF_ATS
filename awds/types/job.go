@@ -13,20 +13,20 @@ const (
 	jobIDPrefix string = "job"
 )
 
-// Pod represents an pod, holding all necessary info. about pod
+// Job represents an job, holding all necessary info. about job
 type Job struct {
-	ID          string    `json:"id" gorm:"primaryKey"`
-	DeviceID string 	  `json:"device_id"`
-	PodID string 		  `json:"pod_id"`
-
-	PartitionRate float64 `json:"partition_rate"`
-	DeviceStartTime time.Time `json:"device_start_time"`
-	DeviceEndTime time.Time `json:"device_end_time"`
-	PodStartTime time.Time `json:"pod_start_time"`
-	PodEndTime time.Time   `json:"pod_end_time"`
-	
-	CreatedAt   time.Time `json:"created_at,omitempty"`
-	UpdatedAt   time.Time `json:"updated_at,omitempty"`
+	ID          string    				`json:"id" gorm:"primaryKey"`
+	DeviceID 	string 	  				`json:"device_id"`
+	PodID 		string 		  			`json:"pod_id"`
+	InputSize 	int 		  			`json:"input_size"` // input size: total number of input for a job
+	PartitionRate float64				`json:"partition_rate`
+	DeviceStartIndex 	int				`json:"device_start_index"` 
+	DeviceEndIndex 	int					`json:"device_end_index"` 
+	PodStartIndex 	int					`json:"pod_start_index"` 
+	PodEndIndex 	int					`json:"pod_end_index"` 
+	Completed	bool 					`json:"completed"`
+	CreatedAt   time.Time 				`json:"created_at,omitempty"`
+	UpdatedAt   time.Time 				`json:"updated_at,omitempty"`
 }
 
 func ValidateJobID(id string) error {

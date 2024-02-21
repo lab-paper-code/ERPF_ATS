@@ -17,8 +17,7 @@ const (
 type Pod struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
 	Endpoint 	string 	  `json:"endpoint"`
-	Description string 	  `json:"description, omitempty"`
-
+	Description string 	  `json:"description,omitempty"`
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
 }

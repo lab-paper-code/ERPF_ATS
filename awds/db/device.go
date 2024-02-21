@@ -39,59 +39,45 @@ func (adapter *DBAdapter) InsertDevice(device *types.Device) error {
 	return nil
 }
 
-// func (adapter *DBAdapter) UpdateDeviceIP(deviceID string, ip string) error {
-// 	var record types.Device
-// 	result := adapter.db.Where("id = ?", deviceID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdateDeviceEndpoint(deviceID string, endpoint string) error {
+	var record types.Device
+	result := adapter.db.Where("id = ?", deviceID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.IP = ip
+	record.Endpoint = endpoint
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateDevicePassword(deviceID string, password string) error {
-// 	var record types.Device
-// 	result := adapter.db.Where("id = ?", deviceID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdateDeviceDescription(deviceID string, description string) error {
+	var record types.Device
+	result := adapter.db.Where("id = ?", deviceID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.Password = password
+	record.Description = description
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateDeviceDescription(deviceID string, description string) error {
-// 	var record types.Device
-// 	result := adapter.db.Where("id = ?", deviceID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) DeleteDevice(deviceID string) error {
+	var device types.Device
+	result := adapter.db.Where("id = ?", deviceID).Delete(&device)
 
-// 	record.Description = description
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	adapter.db.Save(&record)
+	if result.RowsAffected != 1 {
+		return xerrors.Errorf("failed to delete a device")
+	}
 
-// 	return nil
-// }
-
-// func (adapter *DBAdapter) DeleteDevice(deviceID string) error {
-// 	var device types.Device
-// 	result := adapter.db.Where("id = ?", deviceID).Delete(&device)
-
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
-
-// 	if result.RowsAffected != 1 {
-// 		return xerrors.Errorf("failed to delete a device")
-// 	}
-
-// 	return nil
-// }
+	return nil
+}

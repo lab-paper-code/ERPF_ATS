@@ -39,114 +39,142 @@ func (adapter *DBAdapter) InsertJob(job *types.Job) error {
 	return nil
 }
 
-// func (adapter *DBAdapter) UpdateAppName(appID string, name string) error {
-// 	var record types.AppSQLiteObj
-// 	result := adapter.db.Where("id = ?", appID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdateJobDevice(jobID string, deviceID string) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.Name = name
+	record.DeviceID = deviceID
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateAppRequireGPU(appID string, requireGPU bool) error {
-// 	var record types.AppSQLiteObj
-// 	result := adapter.db.Where("id = ?", appID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdateJobPod(jobID string, podID string) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.RequireGPU = requireGPU
+	record.PodID = podID
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateAppDescription(appID string, description string) error {
-// 	var record types.AppSQLiteObj
-// 	result := adapter.db.Where("id = ?", appID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdateInputSize(jobID string, inputSize int) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.Description = description
+	record.InputSize = inputSize
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateAppDockerImage(appID string, dockerImage string) error {
-// 	var record types.AppSQLiteObj
-// 	result := adapter.db.Where("id = ?", appID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdatePartitionRate(jobID string, partitionRate float64) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.DockerImage = dockerImage
+	record.PartitionRate = partitionRate
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateAppCommands(appID string, commands string) error {
-// 	var record types.AppSQLiteObj
-// 	result := adapter.db.Where("id = ?", appID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdateDeviceStartIndex(jobID string, deviceStartIndex int) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.Commands = commands
+	record.DeviceStartIndex = deviceStartIndex
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateAppArguments(appID string, arguments string) error {
-// 	var record types.AppSQLiteObj
-// 	result := adapter.db.Where("id = ?", appID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdateDeviceEndIndex(jobID string, deviceEndIndex int) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.Arguments = arguments
+	record.DeviceEndIndex = deviceEndIndex
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateAppStateful(appID string, stateful bool) error {
-// 	var record types.AppSQLiteObj
-// 	result := adapter.db.Where("id = ?", appID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdatePodStartIndex(jobID string, podStartIndex int) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.Stateful = stateful
+	record.PodStartIndex = podStartIndex
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (adapter *DBAdapter) UpdateAppOpenPorts(appID string, openPorts string) error {
-// 	var record types.AppSQLiteObj
-// 	result := adapter.db.Where("id = ?", appID).Find(&record)
-// 	if result.Error != nil {
-// 		return result.Error
-// 	}
+func (adapter *DBAdapter) UpdatePodEndIndex(jobID string, podEndIndex int) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
 
-// 	record.OpenPorts = openPorts
+	record.PodEndIndex = podEndIndex
 
-// 	adapter.db.Save(&record)
+	adapter.db.Save(&record)
 
-// 	return nil
-// }
+	return nil
+}
+
+func (adapter *DBAdapter) UpdateJobCompleted(jobID string, completed bool) error {
+	var record types.Job
+	result := adapter.db.Where("id = ?", jobID).Find(&record)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	record.Completed = completed
+
+	adapter.db.Save(&record)
+
+	return nil
+}
+
+func (adapter *DBAdapter) DeleteJob(jobID string) error{
+	var job types.Job
+	result := adapter.db.Where("id = ?", jobID).Delete(&job)
+	
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected != 1 {
+		return xerrors.Errorf("failed to delete a job")
+	}
+	return nil
+}
