@@ -155,6 +155,7 @@ func (adapter *RESTAdapter) handleUpdateJob(c *gin.Context) {
 		PodID 				string 		  	`json:"pod_id"`
 		InputSize 			int		  		`json:"input_size"`
 		PartitionRate		float64			`json:"partition_rate"`
+		Completed			bool			`json:"completed"`
 		DeviceStartIndex 	int				`json:"device_start_index"` 
 		DeviceEndIndex 		int				`json:"device_end_index"` 
 		PodStartIndex 		int				`json:"pod_start_index"` 
@@ -208,6 +209,17 @@ func (adapter *RESTAdapter) handleUpdateJob(c *gin.Context) {
 	if input.PartitionRate > 0 {
 		// update PartitionRate
 		err = adapter.logic.UpdatePartitionRate(jobID, input.PartitionRate)
+		if err != nil {
+			// fail
+			logger.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	if !input.Completed {
+		// unset Completed as false
+		err = adapter.logic.UpdateJobCompleted(jobID, input.Completed)
 		if err != nil {
 			// fail
 			logger.Error(err)
