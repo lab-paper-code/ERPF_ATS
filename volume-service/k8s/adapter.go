@@ -3,7 +3,8 @@ package k8s
 import (
 	"time"
 
-	"github.com/lab-paper-code/ksv/volume-service/commons"
+	"volume-service/commons"
+
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

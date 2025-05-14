@@ -7,7 +7,6 @@ import (
 
 type Logic struct {
 	config *commons.Config
-	// scheduler *schedule.Scheduler
 	dbAdapter  *db.DBAdapter
 }
 
@@ -16,7 +15,6 @@ func Start(config *commons.Config, dbAdapter *db.DBAdapter) (*Logic, error) {
 	logic := &Logic{
 		config:     config,
 		dbAdapter:  dbAdapter,
-		// scheduler: 	scheduler,
 	}
 
 	return logic, nil

@@ -1,7 +1,8 @@
 package logic
 
 import (
-	"github.com/lab-paper-code/ksv/volume-service/types"
+	"volume-service/types"
+
 	log "github.com/sirupsen/logrus"
 )
 

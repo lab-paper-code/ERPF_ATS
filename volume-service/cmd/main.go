@@ -6,11 +6,11 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/lab-paper-code/ksv/volume-service/commons"
-	"github.com/lab-paper-code/ksv/volume-service/db"
-	"github.com/lab-paper-code/ksv/volume-service/k8s"
-	"github.com/lab-paper-code/ksv/volume-service/logic"
-	"github.com/lab-paper-code/ksv/volume-service/rest"
+	"volume-service/commons"
+	"volume-service/db"
+	"volume-service/k8s"
+	"volume-service/logic"
+	"volume-service/rest"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

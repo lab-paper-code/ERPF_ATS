@@ -1,5 +1,46 @@
-rest_admin_username: admin
-rest_admin_password: letmein
+# rest_admin_username: admin
+# rest_admin_password: letmein
+# rest_port: 31200
+# kube_config_path: ~/.kube/config
+# log_level: debug
+
+# prometheus:
+#   host: "155.230.36.27"
+#   port: 30803
+#   query: "sum(node_filesystem_avail_bytes) by (node)"
+
+# volume:
+#   device_count: 10
+#   min_size_bytes: 1073741824  # 1GB
+
+rest_admin_username: "admin"
+rest_admin_password: "super-secure-password"
 rest_port: 31200
-kube_config_path: ~/.kube/config
-log_level: debug
+kube_config_path: "/home/user/.kube/config"
+no_kubernetes: false
+log_level: "debug"
+
+db:
+  username: "dbuser"
+  password: "dbpass"
+  address: "127.0.0.1:3306"
+  name: "volume_db"
+
+prometheus:
+  host: "155.230.36.27"
+  port: 30803
+  query: "sum(node_filesystem_avail_bytes) by (node)"
+
+volume:
+  device_count: 10
+  min_size_bytes: 1073741824
+
+cors_allowed_origins:
+  - "http://localhost:5173"
+  - "http://localhost:5174"
+  - "http://127.0.0.1:5173"
+  - "http://127.0.0.1:5174"
+  - "http://155.230.36.27:5173"
+  - "http://155.230.36.27:5174"
+  - "http://155.230.36.27:4140"
+  - "http://155.230.36.27:4141"

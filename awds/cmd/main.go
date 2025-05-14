@@ -27,81 +27,62 @@ var rootCmd = &cobra.Command{
 func Execute() error {
 	return rootCmd.Execute()
 }
-
-func processCommand(command *cobra.Command, args []string) error {
+func processCommand(cmd *cobra.Command, args []string) error {
 	logger := log.WithFields(log.Fields{
 		"package":  "main",
 		"function": "processCommand",
 	})
 
-	cont, err := processFlags(command)
+	cfg, cont, err := processFlags(cmd)
 	if err != nil {
-		logger.Error(err)
-	}
-
-	if !cont {
 		return err
 	}
+	if !cont {
+		return nil
+	}
 
-	// start service
+	// 서비스 시작
 	logger.Info("Starting DB Adapter...")
-	dbAdapter, err := db.Start(config)
+	dbAdapter, err := db.Start(cfg)
 	if err != nil {
-		logger.Fatal(err)
+		return err
 	}
 	defer dbAdapter.Stop()
-	logger.Info("DB Adapter Started")
 
-	// logger.Info("Starting Scheduler...")
-	// scheduler, err := schedule.Start(config)
-	// if err != nil {
-	// 	logger.Fatal(err)
-	// }
-	// defer scheduler.Stop()
-	// logger.Info("Scheduler Started")
-	
-	logik, err := logic.Start(config, dbAdapter)
+	logik, err := logic.Start(cfg, dbAdapter)
 	if err != nil {
-		logger.Fatal(err)
+		return err
 	}
 	defer logik.Stop()
 
 	logger.Info("Starting REST Adapter...")
-	restAdapter, err := rest.Start(config, logik)
+	restAdapter, err := rest.Start(cfg, logik)
 	if err != nil {
-		logger.Fatal(err)
+		return err
 	}
 	defer restAdapter.Stop()
-	logger.Info("REST Adapter Started")
 
-	// wait
-	fmt.Println("Press Ctrl+C to stop...")
+	fmt.Println("✅ AWDS running. Press Ctrl+C to stop...")
 	waitForCtrlC()
-
 	return nil
 }
 
 func main() {
+	// 로그 출력 형식 설정
 	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: "2006-01-02 15:04:05.000",
 		FullTimestamp:   true,
 	})
 
-	config = commons.GetDefaultConfig()
-	log.SetLevel(config.GetLogLevel())
-
-	logger := log.WithFields(log.Fields{
-		"package":  "main",
-		"function": "main",
-	})
-
-	// attach common flags
+	// CLI 플래그 등록
 	setCommonFlags(rootCmd)
 
-	err := Execute()
-	if err != nil {
-		logger.Fatal(err)
-		os.Exit(1)
+	// 커맨드 실행
+	if err := Execute(); err != nil {
+		log.WithFields(log.Fields{
+			"package":  "main",
+			"function": "main",
+		}).Fatal(err)
 	}
 }
 

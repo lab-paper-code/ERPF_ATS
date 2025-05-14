@@ -1,4 +1,4 @@
-PKG=github.com/lab-paper-code/ksv/volume-service
+PKG=volume-service
 VERSION=v0.1.0
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")

@@ -10,19 +10,80 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	defaultRestPort          int    = 10270 
-	defaultLogLevel          string = "fatal"
-	defaultDBUsername        string = "root"
-	defaultDBPassword        string = "root"
-	defaultDBName            string = "ksv2" // ksv: volume-service DB name
-	defaultDBAddress         string = "localhost:3307"
-)
-
 type Config struct {
-	RestPort int    `yaml:"rest_port,omitempty" json:"rest_port,omitempty" envconfig:"VOLUME_SERVICE_REST_PORT"`
+    RestPort int    `yaml:"rest_port,omitempty" json:"rest_port,omitempty" envconfig:"VOLUME_SERVICE_REST_PORT"`
+    LogLevel string `yaml:"log_level,omitempty" json:"log_level,omitempty" envconfig:"VOLUME_SERVICE_LOG_LEVEL"`
 
-	LogLevel string `yaml:"log_level,omitempty" json:"log_level,omitempty" envconfig:"VOLUME_SERVICE_LOG_LEVEL"`
+    DBUsername string `yaml:"db_username,omitempty" json:"db_username,omitempty" envconfig:"VOLUME_SERVICE_DB_USERNAME"`
+    DBPassword string `yaml:"db_password,omitempty" json:"db_password,omitempty" envconfig:"VOLUME_SERVICE_DB_PASSWORD"`
+    DBName     string `yaml:"db_name,omitempty" json:"db_name,omitempty" envconfig:"VOLUME_SERVICE_DB_NAME"`
+    DBAddress  string `yaml:"db_address,omitempty" json:"db_address,omitempty" envconfig:"VOLUME_SERVICE_DB_ADDRESS"`
+
+	SQLitePath string `yaml:"sqlite_path,omitempty" json:"sqlite_path,omitempty" envconfig:"VOLUME_SERVICE_SQLITE_PATH"`
+
+	CORSAllowOrigins []string `yaml:"cors_allow_origins,omitempty" json:"cors_allow_origins,omitempty"`
+	CORSAllowMethods     []string `yaml:"cors_allow_methods,omitempty" json:"cors_allow_methods,omitempty"`
+	CORSAllowHeaders     []string `yaml:"cors_allow_headers,omitempty" json:"cors_allow_headers,omitempty"`
+	CORSAllowCredentials bool     `yaml:"cors_allow_credentials,omitempty" json:"cors_allow_credentials,omitempty"`
+	CORSMaxAgeSeconds    int      `yaml:"cors_max_age_seconds,omitempty" json:"cors_max_age_seconds,omitempty"`
+
+	InitialBatchSize int       `yaml:"initial_batch_size,omitempty"`
+	PrecomputeReferenceLatencies []float64 `yaml:"precompute_reference_latencies,omitempty"`
+
+	TemporaryOutThreshold int  `yaml:"temporary_out_threshold,omitempty"`
+	MinBatchThreshold     int  `yaml:"min_batch_threshold,omitempty"`
+	MaxBatchSize          int  `yaml:"max_batch_size,omitempty"`
+}
+
+
+func (config *Config) Validate() {
+	valid := true
+
+	if config.RestPort == 0 {
+		log.Error("❌ [config] missing required field: rest_port")
+		valid = false
+	}
+	if config.LogLevel == "" {
+		log.Error("❌ [config] missing required field: log_level")
+		valid = false
+	}
+	if config.DBUsername == "" {
+		log.Error("❌ [config] missing required field: db_username")
+		valid = false
+	}
+	if config.DBPassword == "" {
+		log.Error("❌ [config] missing required field: db_password")
+		valid = false
+	}
+	if config.DBName == "" {
+		log.Error("❌ [config] missing required field: db_name")
+		valid = false
+	}
+	if config.DBAddress == "" {
+		log.Error("❌ [config] missing required field: db_address")
+		valid = false
+	}
+	if config.SQLitePath == "" {
+		log.Error("❌ [config] missing required field: sqlite_path")
+		valid = false
+	}
+	if len(config.CORSAllowOrigins) == 0 {
+		log.Warn("⚠️ [config] cors_allow_origins is empty")
+	}
+
+	if !valid {
+		log.Fatal("🚫 Configuration validation failed. Please check config.yaml or environment variables.")
+	} else {
+		log.WithFields(log.Fields{
+			"rest_port":  config.RestPort,
+			"log_level":  config.LogLevel,
+			"db_address": config.DBAddress,
+			"db_name":    config.DBName,
+			"db_user":    config.DBUsername,
+			"sqlite_path": config.SQLitePath,
+			"cors_allow_origins": config.CORSAllowOrigins,
+		}).Info("✅ All configuration fields validated.")
+	}
 }
 
 // GetLogLevel returns logrus log level
@@ -38,10 +99,7 @@ func (config *Config) GetLogLevel() log.Level {
 
 // GetDefaultConfig returns a default config
 func GetDefaultConfig() *Config {
-	return &Config{
-		RestPort:          defaultRestPort,
-		LogLevel:          defaultLogLevel,
-	}
+	return &Config{}
 }
 
 // NewConfigFromJSON creates Config from JSON
@@ -52,6 +110,8 @@ func newConfigFromJSON(jsonBytes []byte) (*Config, error) {
 	if err != nil {
 		return nil, xerrors.Errorf("failed to unmarshal JSON - %v", err)
 	}
+
+	config.Validate()
 
 	return config, nil
 }
@@ -65,6 +125,8 @@ func newConfigFromYAML(yamlBytes []byte) (*Config, error) {
 		return nil, xerrors.Errorf("failed to unmarshal YAML - %v", err)
 	}
 
+	config.Validate()
+
 	return config, nil
 }
 
@@ -76,6 +138,8 @@ func newConfigFromENV() (*Config, error) {
 	if err != nil {
 		return nil, xerrors.Errorf("failed to read config from environmental variables - %v", err)
 	}
+
+	config.Validate()
 
 	return config, nil
 }

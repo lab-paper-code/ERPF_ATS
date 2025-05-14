@@ -6,17 +6,16 @@ import (
 	"net/http"
 	"strconv"
 
+	"volume-service/commons"
+	"volume-service/types"
+
 	"github.com/gin-gonic/gin"
-	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"gopkg.in/resty.v1"
 )
 
 const (
-	prometheusServiceIP = "155.230.36.27" // change according to prometheus settings
-	prometheusPort      = "30803"
-
 	queryTotalVolumeCapacity       = "sum(node_filesystem_avail_bytes) by (node)"
 	D                              = 10                 // D: expected number of edge devices
 	volumeSizeMinimum        int64 = 1024 * 1024 * 1024 // 1GB
@@ -37,8 +36,12 @@ func (adapter *RESTAdapter) setupVolumeRouter() {
 }
 
 func getAvailVolumeSize() int {
-	url := fmt.Sprintf("http://%s:%s/api/v1/query", prometheusServiceIP, prometheusPort)
-	data := map[string]string{"query": queryTotalVolumeCapacity}
+	cfg := commons.Config
+
+	url := fmt.Sprintf("http://%s:%d/api/v1/query", cfg.Prometheus.Host, cfg.Prometheus.Port)
+	data := map[string]string{"query": cfg.Prometheus.Query}
+	// url := fmt.Sprintf("http://%s:%s/api/v1/query", prometheusServiceIP, prometheusPort)
+	// data := map[string]string{"query": queryTotalVolumeCapacity}
 
 	client := resty.New() // create rest client to send prometheus request
 	// ask for available capacity

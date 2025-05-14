@@ -1,4 +1,4 @@
-PKG=github.com/lab-paper-code/ksv/awds
+PKG=$(shell grep '^module ' go.mod | awk '{print $$2}')
 VERSION=v0.1.0
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")

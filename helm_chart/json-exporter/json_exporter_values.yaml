@@ -62,81 +62,8 @@ serviceMonitor:
     scrapeTimeout: 30s
 
   targets:
-    - name : pi1
-      url: http://155.230.35.31:60003
-      labels: {}                            
-      interval: 5m                         
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-      
-    - name : pi2
-      url: http://155.230.35.32:60003
-      labels: {}                            
-      interval: 5m                         
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-      
-    - name : pi3
-      url: http://155.230.35.24:60003
-      labels: {}
-      interval: 5m
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-      
-    - name : pi4
-      url: http://155.230.35.25:60003
-      labels: {}
-      interval: 5m
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-      
-    - name : pi5
-      url: http://155.230.35.26:60003
-      labels: {}
-      interval: 5m
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-      
-    - name : pi6
-      url: http://155.230.36.223:60003
-      labels: {}
-      interval: 5m
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-
-    - name : pi7
-      url: http://155.230.35.27:60003
-      labels: {}
-      interval: 5m
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-
-    - name : pi8
-      url: http://155.230.35.28:60003
-      labels: {}
-      interval: 5m
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-
-    - name : pi9
-      url: http://155.230.35.29:60003
-      labels: {}
-      interval: 5m
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-
-    - name : pi10
-      url: http://155.230.35.30:60003
-      labels: {}
-      interval: 5m
-      scrapeTimeout: 5m
-      additionalMetricsRelabels: {}
-
-
-    
-
 #    - name: pod1                            # Human readable URL that will appear in Prometheus / AlertManager
-#      url: http://155.230.36.27/app/pod1    # The URL that json-exporter will scrape
+#      url: http://[your_ip]/app/pod1    # The URL that json-exporter will scrape
 #      labels: {}                            # Map of labels for ServiceMonitor. Overrides value set in `defaults`
 #      interval: 2m                         # Scraping interval. Overrides value set in `defaults`
 #      scrapeTimeout: 1m                    # Scrape timeout. Overrides value set in `defaults`

@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lab-paper-code/ksv/volume-service/types"
+	"volume-service/types"
+
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"

@@ -2,7 +2,6 @@ package rest
 
 import (
 	"awds/types"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -166,7 +165,7 @@ func (adapter *RESTAdapter) handleUpdateDevice(c *gin.Context) {
 	var input deviceUpdateRequest
 
 	err = c.BindJSON(&input)
-	fmt.Println(input)
+	logger.Debugf("Device update request: %+v", input)
 	if err != nil {
 		// fail
 		logger.Error(err)

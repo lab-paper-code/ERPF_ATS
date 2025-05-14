@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lab-paper-code/ksv/volume-service/types"
+	"volume-service/types"
+
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
@@ -65,7 +66,7 @@ func (adapter *K8SAdapter) CreateVolume(volume *types.Volume) error {
 			AccessModes: []apiv1.PersistentVolumeAccessMode{
 				apiv1.ReadWriteMany,
 			},
-			Resources: apiv1.ResourceRequirements{
+			Resources: apiv1.VolumeResourceRequirements{
 				Requests: apiv1.ResourceList{
 					apiv1.ResourceStorage: volumeSize,
 				},

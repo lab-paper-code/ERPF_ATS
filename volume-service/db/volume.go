@@ -1,7 +1,8 @@
 package db
 
 import (
-	"github.com/lab-paper-code/ksv/volume-service/types"
+	"volume-service/types"
+
 	"golang.org/x/xerrors"
 )
 

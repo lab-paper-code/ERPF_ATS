@@ -3,7 +3,8 @@ package k8s
 import (
 	"context"
 
-	"github.com/lab-paper-code/ksv/volume-service/types"
+	"volume-service/types"
+
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,17 +53,17 @@ func (adapter *K8SAdapter) CreateSecret(device *types.Device) error {
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
-	secretclient := adapter.clientSet.CoreV1().Secrets(secretNamespace)
-	_, err := secretclient.Get(ctx, secret.GetName(), metav1.GetOptions{})
+	secretClient := adapter.clientSet.CoreV1().Secrets(secretNamespace)
+	_, err := secretClient.Get(ctx, secret.GetName(), metav1.GetOptions{})
 	if err != nil {
 		// does not exist
-		_, createErr := secretclient.Create(ctx, secret, metav1.CreateOptions{})
+		_, createErr := secretClient.Create(ctx, secret, metav1.CreateOptions{})
 		if createErr != nil {
 			return createErr
 		}
 	} else {
 		// exist -> update
-		_, updateErr := secretclient.Update(ctx, secret, metav1.UpdateOptions{})
+		_, updateErr := secretClient.Update(ctx, secret, metav1.UpdateOptions{})
 		if updateErr != nil {
 			return updateErr
 		}

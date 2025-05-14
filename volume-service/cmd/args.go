@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/lab-paper-code/ksv/volume-service/commons"
-	"github.com/lab-paper-code/ksv/volume-service/db"
+	"volume-service/commons"
+	"volume-service/db"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

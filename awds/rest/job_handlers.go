@@ -2,7 +2,6 @@ package rest
 
 import (
 	"awds/types"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -153,7 +152,7 @@ func (adapter *RESTAdapter) handleUpdateJob(c *gin.Context) {
 	var input jobUpdateRequest
 
 	err = c.BindJSON(&input)
-	fmt.Println(input)
+	logger.Debugf("UpdateJob request: %+v", input)
 	if err != nil {
 		// fail
 		logger.Error(err)
@@ -271,43 +270,3 @@ func (adapter *RESTAdapter) handleScheduleJob(c *gin.Context) {
 
 	c.JSON(http.StatusOK, job)
 }
-
-// func (adapter *RESTAdapter) handleUnscheduleJob(c *gin.Context) {
-// 	logger := log.WithFields(log.Fields{
-// 		"package":  "rest",
-// 		"struct":   "RESTAdapter",
-// 		"function": "handleUnmountVolume",
-// 	})
-
-// 	logger.Infof("access request to %s", c.Request.URL)
-
-// 	jobID := c.Param("id")
-
-// 	err := types.ValidateJobID(jobID)
-// 	if err != nil {
-// 		// fail
-// 		logger.Error(err)
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	job, err := adapter.logic.GetJob(jobID)
-// 	if err != nil {
-// 		// fail
-// 		logger.Error(err)
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	logger.Debugf("Unscheduling Job ID: %s", jobID)
-
-// 	err = adapter.logic.UnscheduleJob(jobID)
-// 	if err != nil {
-// 		// fail
-// 		logger.Error(err)
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, job)
-// }

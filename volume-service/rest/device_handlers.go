@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"volume-service/types"
+
 	"github.com/gin-gonic/gin"
-	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 )
@@ -133,7 +134,7 @@ func (adapter *RESTAdapter) handleRegisterDevice(c *gin.Context) {
 	logger.Infof("access request to %s", c.Request.URL)
 
 	type deviceRegistrationRequest struct {
-		IP          string `json:"ip,omitempty"`
+		IP          string `json:"ip"`
 		Password    string `json:"password"`
 		Description string `json:"description,omitempty"`
 	}

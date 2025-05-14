@@ -1,6 +1,6 @@
 const request = async (operation, url, params, headers, username, password, credentials = 'include') => {
   let method = operation.toUpperCase();
-  let _url = 'http://155.230.36.27:31200' + url;
+  let _url = 'http://[your_ip]:[your_port]' + url;
 
   if (method === 'GET') {
     _url += new URLSearchParams(params).toString();

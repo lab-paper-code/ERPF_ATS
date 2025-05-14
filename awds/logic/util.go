@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 func (logic *Logic) GetFullEndpoint(ip string, port string, endpoint string, startIdx int, endIdx int) string {
@@ -44,16 +45,17 @@ func (q *Queue) Enqueue (id string) {
 }
 
 //Dequeue - pop first element from queue
-func (q *Queue) Dequeue() (string, error) {
-	if q.IsEmpty() {
-		return "", fmt.Errorf("queue is empty")
+func (q *Queue) Dequeue() string {
+	i := 0
+
+	for (q.IsEmpty()) {
+		// 빈 문자열 리턴해서 문제 -> 얘는 Empty() 안 될때까지 다시 확인해야
+		i++
+		time.Sleep(200 * time.Millisecond) // sleep 1s, then try again
 	}
+
 	data := (*q)[0] // get first element
 	*q = (*q)[1:]   // remove first element
-	// fmt.Printf("Dequeue: %v\n", data)
-	return data, nil
+	return data
+	
 }
-
-// func calculateComputeTime(batchSize float64, elapsedTime float64, networkLatency float64) float64 {
-// 	return elapsedTime - (batchSize / networkLatency)
-// }

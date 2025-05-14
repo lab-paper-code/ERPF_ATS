@@ -12,15 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-
-var (
-	// batchSize int = 50
-	batchInit int = 30 // batchSize used for first batch
-	averageInputSize = 1000 // 10e5B -> 100 KB
-	precomputeResult = []float64{46.46300911903381, 24.42876386642456, 31.25728440284729, 2.646643877029419,0.370161771774292}
-	// failedJob map[string][]string
-)
-
 // map to record device info for calculating batch size
 type deviceRecord map[string][]float64
 
@@ -68,6 +59,7 @@ func (logic *Logic) UpdateDeviceIDList(jobID string, deviceIDList []string) erro
 	})
 
 	deviceIDTemp := []string{}
+	
 	for _, deviceID := range deviceIDList{
 		deviceIDTemp = append(deviceIDTemp, deviceID)
 	}
@@ -103,27 +95,32 @@ func (logic *Logic) DeleteJob(jobID string) error {
 	return logic.dbAdapter.DeleteJob(jobID)
 }
 
-// for reference
-//  raspPi4 = 46.46300911903381  // 1
-// 	raspPi5 = 24.42876386642456  // 2
-// 	jetsonNanoCPU = 31.25728440284729 // 1.5
-// 	// 젯슨 나노 (GPU) : 하는중…. // 
-// 	podCPU = 2.646643877029419 // 17.5
-// 	podGPU = 0.370161771774292 // 125.5
-func (logic *Logic) determineDeviceType(elapsedTime float64) int {
+// return first batchsize according to elapsedTime of adjustment stage
+func (logic *Logic) determineDeviceType(elapsedTime float64) (float64, int) {
+	diff := math.Abs(logic.config.PrecomputeReferenceLatencies[0] - elapsedTime)
 	idx := 0
-	diff := math.Abs(precomputeResult[0] - elapsedTime)
-	for i, v := range(precomputeResult) {
+	var predictedTime float64
+
+	for i, v := range(logic.config.PrecomputeReferenceLatencies) {
 		if math.Abs(v - elapsedTime) < diff {
 			idx = i
 			diff = math.Abs(v - elapsedTime)
 		}
 	}
+	averageTilt :=  (elapsedTime + logic.config.PrecomputeReferenceLatencies[idx]) / float64(logic.config.InitialBatchSize * 2)
+	nextbatch := int(logic.config.PrecomputeReferenceLatencies[idx] / averageTilt)
+	predictedTime = averageTilt * float64(nextbatch)
 
-	return int(precomputeResult[0] / precomputeResult[idx] * float64(batchInit))
+
+	if nextbatch > logic.config.MaxBatchSize{
+		nextbatch = logic.config.MaxBatchSize
+		predictedTime = elapsedTime
+	}
+	
+	return predictedTime, nextbatch
 }
 
-
+// ywjang
 func (logic *Logic) AdjustBatchSize(devIdQ *Queue, devRcdMap *deviceRecord, startIdx int, endIdx int) (int, error) {
 	logger := log.WithFields(log.Fields{
 		"package": "logic",
@@ -133,13 +130,12 @@ func (logic *Logic) AdjustBatchSize(devIdQ *Queue, devRcdMap *deviceRecord, star
 	logger.Debug("received AdjustBatchSize()")
 
 	deviceNum := len(*devIdQ)
-	adjustBatchSize := 30
-	// precomputation: 1% / deviceNum, serve as endIdx for precomputation
-	// adjustBatchSize := int(0.01 * float64(endIdx - startIdx - 1) / float64(deviceNum))
-	// if adjustBatchSize < 1 {
-	// 	adjustBatchSize = 1 
-	// }
+	adjustBatchSize := logic.config.InitialBatchSize
 	
+	if (endIdx - startIdx) < adjustBatchSize{
+		adjustBatchSize = (endIdx - startIdx)
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(deviceNum)
 	errChan := make(chan error, 1)
@@ -151,65 +147,49 @@ func (logic *Logic) AdjustBatchSize(devIdQ *Queue, devRcdMap *deviceRecord, star
 		}
 
 		func(i int)() {
-			defer wg.Done()
-			elapsedTime, err := logic.Compute(&device, startIdx, startIdx + adjustBatchSize)
+			defer wg.Done() 
+			elapsedTime, _, err := logic.Compute(&device, startIdx, startIdx + adjustBatchSize)
 			if err != nil {
 				errChan <- err
 				return 
 			}
-			device, err := logic.GetDeviceResourceMetrics(&device)
-			if err != nil {
-				errChan <- err
-				return
-			}
+			nextPredictTime, nextBatchSize  := logic.determineDeviceType(elapsedTime)
 			
-			// implement function to determine device -> nextBatchSize 
-
-			// SetNextBatchSize predictTime float64, elapsedTime float64, batchSize float64, adjustBatchSize int, batchNum int
-			// Predict elapsedTime float64, batchSize float64, batchSize float64, batchNum int
-			// predictTime, elapsedTime, batchSize, batchSize, batchNum
-			nextBatchSize := logic.determineDeviceType(elapsedTime)
-			fmt.Println("nextBatchSize", nextBatchSize)
-			predictTime := logic.Predict(elapsedTime, float64(adjustBatchSize), float64(nextBatchSize), 1)
-			fmt.Println("AdjustBatchSize(deviceID, elapsedTime, adjustBatchSize, nextBatchSize, predictTime): ", device.ID, elapsedTime, adjustBatchSize, nextBatchSize, predictTime)
-			(*devRcdMap)[deviceID][0] = predictTime // current PredictTime
+			fmt.Println("AdjustBatchSize(deviceID, elapsedTime, adjustBatchSize, nextBatchSize, predictTime): ", device.ID, elapsedTime, adjustBatchSize, nextBatchSize, nextPredictTime, time.Now().Unix())
+			(*devRcdMap)[deviceID][0] = nextPredictTime // current PredictTime
 			(*devRcdMap)[deviceID][1] = elapsedTime // current elapsedTime
-			(*devRcdMap)[deviceID][2] = float64(adjustBatchSize) // current BatchSize
+			(*devRcdMap)[deviceID][2] = float64(logic.config.InitialBatchSize) // current BatchSize
 			(*devRcdMap)[deviceID][3] = float64(nextBatchSize)// nextBatchSize
 			(*devRcdMap)[deviceID][4] += 1 // used to count batchNumber
 			return
 			
 		}(idx)
 		startIdx += adjustBatchSize // update StartIdx
+		
 	}
-
-	wg.Wait()
 
 	return adjustBatchSize, nil
 }
 
-func (logic *Logic) SetNextBatchSize(predictTime float64, elapsedTime float64, availableMemory float64, batchSize float64, adjustBatchSize int, batchNum int) int {
-	// set nextBatchSize based on predictTime, elapsedTime, batchSize of current batchSize
-	nextBatch := int(predictTime / elapsedTime * batchSize)
-	if nextBatch < 1{
-		nextBatch = 1
-	} else if int(averageInputSize * nextBatch) > int(0.8 * availableMemory){
-		nextBatch = int(0.8 * availableMemory / float64(averageInputSize))
-	}
-	return nextBatch
+func (logic *Logic) SetNextBatchSize(predictTime float64, elapsedTime float64, previousBatchSize float64, currentBatchSize float64) (int, float64) {
+
+    currentSpeed := currentBatchSize / elapsedTime
+
+    nextBatch := int(currentSpeed * predictTime)
+
+    if nextBatch < logic.config.MinBatchThreshold {
+        nextBatch = logic.config.MinBatchThreshold
+    } else if nextBatch > logic.config.MaxBatchSize {
+        nextBatch = logic.config.MaxBatchSize 
+    }
+
+    nextPredictTime := (predictTime + elapsedTime) / 2
+
+    return nextBatch, nextPredictTime
 }
 
 
-func (logic *Logic) Predict(elapsedTime float64, batchSize float64, nextBatchSize float64, batchNum int) float64{
-	// predict based on elapsedTime, batchSize, nextBatchSize
-	if batchNum == 0 {
-		return 0
-	} else {
-		return (elapsedTime/ batchSize) * nextBatchSize
-	}
-}
-
-func (logic *Logic) Compute(device *types.Device, batchStartIdx int, batchEndIdx int) (float64, error) {
+func (logic *Logic) Compute(device *types.Device, batchStartIdx int, batchEndIdx int) (float64, float64, error) {
 	logger := log.WithFields(log.Fields{
 		"package": "logic",
 		"struct" : "Logic",
@@ -219,58 +199,27 @@ func (logic *Logic) Compute(device *types.Device, batchStartIdx int, batchEndIdx
 	logger.Debugf("received Compute()")
 
 	type Response struct {
-		Result	float64	`json: "result"`
+		ElapsedTime	float64	`json:"elapsed_time"`
+		ComputeTime float64	`json:"compute_time"`
 	}
+
 	var response Response
 	fullEndpoint := logic.GetFullEndpoint(device.IP, device.Port,device.Endpoint, batchStartIdx, batchEndIdx)
 	
 	client := resty.New()
 	_, err := client.R().SetResult(&response).Get(fullEndpoint)
+	
 	if err != nil {
-		return -1, err
+		fmt.Println("error in Compute():", err)
+		return 0, 0, err
 	}
 	
-	elapsedTime := response.Result
-
-	return elapsedTime, nil
+	elapsedTime := response.ElapsedTime
+	computeTime := response.ComputeTime
+	return elapsedTime, computeTime, nil
 }
 
-
-// TODO: implement map for each Job Object and 
-// func (logic *Logic) SaveFailedWorkload(jobID string, startIndex int, batchSize int) error {
-// 	// ensure failedJob map is initialized
-// 	if failedJob == nil {
-// 		failedJob = make(map[string][]string)
-// 	}
-
-// 	var failedIndex string = fmt.Sprintf("%d-%d", startIndex, startIndex+batchSize)
-// 	failedJob[jobID] = append(failedJob[jobID], failedIndex)
-	
-// 	return nil
-// }
-
-// func(logic *Logic) ComputeWithRetry(jobID string, deviceID string, batchSize int, maxRetries int) error {
-// 	for i := 0; i < maxRetries; i++ {
-// 		device, err := logic.dbAdapter.GetDevice(deviceID)
-// 		if err != nil {
-// 			return err
-// 		}
-		
-// 		job, err := logic.dbAdapter.GetJob(jobID)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		err = logic.Compute(&device, &job, batchSize)
-// 		if err == nil {
-// 			// success, no need to retry
-// 			return nil 
-// 		}	
-// 	}
-// 	return fmt.Errorf("compute failed, saved to failedJob and will be computed later")
-// }
-
-
+// ywjang
 func (logic *Logic) ScheduleJob(jobID string) error {
 	logger := log.WithFields(log.Fields{
 		"package": "logic",
@@ -279,137 +228,169 @@ func (logic *Logic) ScheduleJob(jobID string) error {
 	})
 	
 	logger.Debug("received ScheduleJob()")
-	
-	// filename := time.Now().Format("01-02-15:04:05")
-	// file, err := os.Create(filename + ".txt")
-	// if err != nil {
-	// 	fmt.Println("Error create file:", err)
-	// 	os.Exit(1)
-	// }
-	// defer file.Close()
-
-	// os.Stdout = file
 
 	startTime := time.Now()
+	fmt.Println(time.Now().Unix())
 	job, err := logic.dbAdapter.GetJob(jobID)
 	if err != nil {
 		return err
 	}
-	// start index for batch, increases from job.StartIndex to job.EndIndex	
-	jobStartIdx := job.StartIndex // start index for job
-	jobEndIdx := job.EndIndex // end index for job
-	batchStartIdx := jobStartIdx
-	var batchEndIdx int
 	
-
-	errChan := make(chan error, 1)
 	// queue to hold available deviceID
 	var deviceIDQueue Queue
 	// map to hold previous and current latency
 	deviceRecordMap := deviceRecord{}
+	// enqueue deviceID into deviceIDQueue
 	for _, deviceID := range job.DeviceIDList{
 		deviceIDQueue.Enqueue(deviceID)
-		deviceRecordMap[deviceID] = make([]float64, 5)
+		deviceRecordMap[deviceID] = make([]float64, 7)
 	}
+
+	// initialize job, batch index
+	jobStartIdx := job.StartIndex // start index for job; now set to zero for experiment, but may change later
+	jobEndIdx := job.EndIndex // end index for job
+	batchStartIdx := jobStartIdx // start index for batch, initialized as jobStartIdx
+	batchEndIdx := 0 // end index for batch
 	
+	// job start index > job end index
+	if jobStartIdx >= jobEndIdx {
+		// job start index >= job end index -> terminate
+		fmt.Println("schedule done: no need to work")
+		return nil
+	}
+
 	// adjustBatchSize for entire time
 	adjustBatchSize, err := logic.AdjustBatchSize(&deviceIDQueue, &deviceRecordMap, jobStartIdx, jobEndIdx)
 		if err != nil {
 			return err
 	}
+	fmt.Println("adjustBatchSize: ", adjustBatchSize)
 
-	// for _, deviceID := range job.DeviceIDList{
-	// 	fmt.Printf("after adjustment: ")
-	// 	fmt.Println(deviceID, deviceRecordMap[deviceID])
-	// }
+	batchStartIdx = batchStartIdx + adjustBatchSize * len(job.DeviceIDList) // increase batch start index(adjustment stage completed)
+	// channel for task completions or errors, change size if device number increases
+	taskResults := make(chan error, 10) 
+	
+	iterNum := 0 // need to check if it's first batch of entire schedule
 
-	jobStartIdx += adjustBatchSize * len(job.DeviceIDList) // update precompute results
-	batchEndIdx = jobStartIdx
+	prevBatchSize := float64(logic.config.MaxBatchSize)
 
 	for {
-		// get deviceID from queue
-		// TODO: busy waiting -> change later
-		if len(deviceIDQueue) == 0 {
+		if deviceIDQueue.IsEmpty() {
+			// If the queue is empty, wait for results from ongoing tasks before trying to dequeue again
+			err := <-taskResults
+			if err != nil {
+				fmt.Println("Error processing batch:", err)
+			}
 			continue
 		}
-		
-		dID, err := deviceIDQueue.Dequeue()
-		if err != nil {
-			fmt.Println(err)
-		}
 
+		// need to use channel instead of deviceQueue
+		dID := deviceIDQueue.Dequeue()
+		
 		device, err := logic.dbAdapter.GetDevice(dID)
 		if err != nil {
-			deviceIDQueue.Enqueue(dID)
+			deviceIDQueue.Enqueue(dID) // enqueue dID to try later
 			return err
 		}
 
-		if (batchStartIdx > jobEndIdx) || (batchEndIdx == jobEndIdx) {
-			break // job done
+		if (batchEndIdx == jobEndIdx) {
+			fmt.Println("job done")
+			break
 		}
 
 		batchSize := int(deviceRecordMap[dID][3]) // call batchSize from deviceRecord
+		if iterNum > 0 {
+			batchStartIdx = batchEndIdx
+		}
+		batchEndIdx = batchStartIdx + batchSize
+		
+		stopFlag := false 
 
-		// swap batchEndIdx and batchStartIdx
-		temp := batchEndIdx
-		batchStartIdx := batchEndIdx
-		batchEndIdx = temp + batchSize
-
-		// batchEndIdx cannot exceed jobEndIdx
-		if batchEndIdx > jobEndIdx {
-			batchEndIdx = jobEndIdx
+		predictTime := deviceRecordMap[dID][1]
+		if (batchStartIdx < jobEndIdx  && batchEndIdx > jobEndIdx){ 
+			// batch start index is ok, but batch end index exceeds job end index -> too much batch size
+			batchEndIdx = jobEndIdx // set batch end index to job end index
+			batchSize = batchEndIdx - batchStartIdx
+			predictTime = deviceRecordMap[dID][1] / deviceRecordMap[dID][2] * float64(batchSize)
+			stopFlag = true
+		}
+		
+		// batch size < lower threshold -> out of schedule
+		if (batchSize <= logic.config.MinBatchThreshold) {
+			fmt.Printf("device %s batchsize below %d, out of schedule!\n", dID, logic.config.MinBatchThreshold)
+			continue
 		}
 
-		deviceRecordMap[dID][2] = deviceRecordMap[dID][3] // update nextbatchSize to currentBatchSize
+		deviceRecordMap[dID][1] = predictTime
+		deviceRecordMap[dID][2] = float64(batchSize) // update deviceRecordMap[2](current batch size) in the map
 		deviceRecordMap[dID][4] += 1 // update batchNum
+		deviceRecordMap[dID][5] = float64(batchStartIdx)
+		deviceRecordMap[dID][6] = float64(batchEndIdx)
 
-		// batchStartIdx  < jobEndIndex -> create thread
-		if batchStartIdx < jobEndIdx{
-			// func inside thread
-			go func(){
-				// send compute request to device
-				elapsedTime, err := logic.Compute(&device, batchStartIdx, batchEndIdx)
-				if err != nil {
-					errChan <- err
-					return 
+		// create goroutines
+		if batchStartIdx < jobEndIdx {
+			// send compute request to device
+			// wg.Add(1)
+			go func(dID string){
+				// defer wg.Done()
+				// batchsize lower than threshold
+				// sleep for 10 secs -> return to job
+				if (batchEndIdx - batchStartIdx < logic.config.TemporaryOutThreshold) { 
+					fmt.Printf("device %s batchsize below %d, sleep for 10 secs\n", dID, logic.config.TemporaryOutThreshold)
+					time.Sleep(10 * time.Second)
 				}
 
-				// update resource metric of device when batch ends
-				device, err := logic.GetDeviceResourceMetrics(&device)
+				elapsedTime, _, err := logic.Compute(
+					&device, 
+					int(deviceRecordMap[dID][5]), 
+					int(deviceRecordMap[dID][6]),
+				)
+				deviceRecordMap[dID][1] = elapsedTime // elapsedTime
 				if err != nil {
-					errChan <- err
+					taskResults <- err
 					return
 				}
-				
-				nextBatchSize := logic.SetNextBatchSize(deviceRecordMap[dID][0], deviceRecordMap[dID][1], device.Memory, deviceRecordMap[dID][2], 0, int(deviceRecordMap[dID][4]))
-				predictTime := logic.Predict(deviceRecordMap[dID][1], deviceRecordMap[dID][2], float64(nextBatchSize), int(deviceRecordMap[dID][4]))
-				fmt.Println("In Schedule loop(deviceID, elapsedTime, batchSize, nextBatchSize, predictTime): ", dID, elapsedTime, batchSize, nextBatchSize, predictTime)
+
+				// sbkwon 0326 수정
+				nextBatchSize, predictTime := logic.SetNextBatchSize(
+					deviceRecordMap[dID][0],
+					deviceRecordMap[dID][1], 
+					// prevTime,	
+					prevBatchSize,
+					float64(int(deviceRecordMap[dID][6])-int(deviceRecordMap[dID][5])),
+				)
+				fmt.Println("In Schedule Loop(deviceID, elapsedTime, batchSize, nextBatchSize, predictTime): ", dID, elapsedTime, int(int(deviceRecordMap[dID][6])-int(deviceRecordMap[dID][5])), nextBatchSize, predictTime, time.Now().Unix())
 				deviceRecordMap[dID][0] = predictTime // predictTime
-				deviceRecordMap[dID][1] = elapsedTime // elapsedTime
 				deviceRecordMap[dID][2] = float64(batchSize) // current batch Size
 				deviceRecordMap[dID][3] = float64(nextBatchSize) // next batch Size
 				
-				// err = logic.dbAdapter.UpdateDeviceResourceMetrics(dID, device.Memory, device.NetworkLatency)
-				// if err != nil {
-				// 	errChan <- err
-				// 	return
-				// }
-
-				// compute succeed -> enqueue deviceID to get another batch
-				deviceIDQueue.Enqueue(dID)
-			}()
+				prevBatchSize = float64(batchSize) // sbkwon 0326
+				// prevTime = elapsedTime // sbkwon 0326
+								
+				// job finished successfully
+				if err == nil {
+					taskResults <- nil
+					deviceIDQueue.Enqueue(dID) // re-enqueue
+				}
+				
+			}(dID)
+			
+			select {
+			case err := <-taskResults:
+				if err != nil {
+					fmt.Println("Error processing batch:", err)
+					deviceIDQueue.Enqueue(dID) // Possible re-enqueue on error
+				}
+			default:
+				iterNum++
+				// No waiting, continue to spawn new goroutines
+			}
 		}
-
-		// fmt.Println("batchStartIdx & batchEndIdx", batchStartIdx, batchEndIdx)
-		// job ended
-		// if (batchEndIdx == jobEndIdx) || (batchStartIdx >= jobEndIdx) {
-		// 	fmt.Println("Job Done!")
-		// 	break
-		// }
-
+		if stopFlag {
+			break
+		}
 	}
-	// TODO: handle resources after goroutine finishes
-	// fmt.Println("startIdx after scheduling", batchStartIdx)
+
 	// update startIdx
 	err = logic.dbAdapter.UpdateStartIndex(jobID, batchStartIdx)
 	if err != nil {
@@ -421,37 +402,7 @@ func (logic *Logic) ScheduleJob(jobID string) error {
     if err != nil {
         return err
     }
-	timeTaken := time.Since(startTime)
+	timeTaken := time.Since(startTime).Seconds()
 	fmt.Println("time taken:", timeTaken)
 	return nil
 }
-		
-// func (logic *Logic) UnscheduleJob(jobID string) error {
-// 	logger := log.WithFields(log.Fields{
-// 		"package": "logic",
-// 		"struct" : "Logic",
-// 		"function" : "UnscheduleJob",
-// 	})
-
-// 	logger.Debug("received UnscheduleJob()")
-
-// 	job, err := logic.dbAdapter.GetJob(jobID)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	pod, err := logic.dbAdapter.GetPod(job.PodID)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	for true {
-// 		job, _ = logic.dbAdapter.GetJob(jobID)
-// 		Compute()
-		
-// 		// break when job completes
-// 		if job.Completed /* &&  device Job and pod Job completes  */ {
-// 			break
-// 		}
-// 	}
-// }

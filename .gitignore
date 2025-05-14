@@ -27,3 +27,5 @@ io_optimization/env/
 
 **/__pycache__/
 **/bin/
+volume-service/config.yaml
+awds/config.yaml

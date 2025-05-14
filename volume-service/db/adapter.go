@@ -4,8 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lab-paper-code/ksv/volume-service/commons"
-	"github.com/lab-paper-code/ksv/volume-service/types"
+	"volume-service/commons"
+	"volume-service/types"
+
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

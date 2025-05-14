@@ -27,65 +27,52 @@ func setCommonFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&clearDB, "clear_db", false, "Clear DB data")
 }
 
-func processFlags(command *cobra.Command) (bool, error) {
+func processFlags(command *cobra.Command) (*commons.Config, bool, error) {
 	logger := log.WithFields(log.Fields{
-		"package":  "main",
+		"package":  "cmd",
 		"function": "processFlags",
 	})
 
-	if debug {
-		log.SetLevel(log.DebugLevel)
-	}
-
 	if help {
-		printHelp(command)
-		return false, nil // stop here
+		_ = printHelp(command)
+		return nil, false, nil
 	}
 
 	if version {
-		printVersion(command)
-		return false, nil // stop here
+		_ = printVersion(command)
+		return nil, false, nil
 	}
 
-	if len(configPath) > 0 {
-		loadedConfig, err := commons.LoadConfigFile(configPath)
-		if err != nil {
-			logger.Error(err)
-			return false, err // stop here
-		}
+	var cfg *commons.Config
+	var err error
 
-		// overwrite config
-		config = loadedConfig
+	switch {
+	case configPath != "":
+		cfg, err = commons.LoadConfigFile(configPath)
+	case envConfig:
+		cfg, err = commons.LoadConfigEnv()
+	default:
+		cfg, err = commons.LoadConfigFile("config.yaml")
+	}
+	if err != nil {
+		logger.Error(err)
+		return nil, false, err
 	}
 
-	if envConfig {
-		loadedConfig, err := commons.LoadConfigEnv()
-		if err != nil {
-			logger.Error(err)
-			return false, err // stop here
-		}
-
-		// overwrite config
-		config = loadedConfig
-	}
-
-	log.SetLevel(config.GetLogLevel())
-
-	// prioritize command-line flag over config files
+	// 로그 레벨 설정
+	log.SetLevel(cfg.GetLogLevel())
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
 	if clearDB {
-		// clear db
-		err := db.RemoveDBFile(config)
-		if err != nil {
+		if err := db.RemoveDBFile(cfg); err != nil {
 			logger.Error(err)
-			return false, err
+			return nil, false, err
 		}
 	}
 
-	return true, nil // contiue
+	return cfg, true, nil
 }
 
 func printVersion(command *cobra.Command) error {

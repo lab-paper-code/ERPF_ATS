@@ -1,9 +1,9 @@
 package logic
 
 import (
-	"github.com/lab-paper-code/ksv/volume-service/commons"
-	"github.com/lab-paper-code/ksv/volume-service/db"
-	"github.com/lab-paper-code/ksv/volume-service/k8s"
+	"volume-service/commons"
+	"volume-service/db"
+	"volume-service/k8s"
 )
 
 type Logic struct {

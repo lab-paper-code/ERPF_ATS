@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"volume-service/commons"
+	"volume-service/logic"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/lab-paper-code/ksv/volume-service/commons"
-	"github.com/lab-paper-code/ksv/volume-service/logic"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -32,8 +33,7 @@ func Start(config *commons.Config, logik *logic.Logic) (*RESTAdapter, error) {
 	router := gin.Default()
 	router.Use(cors.New(
 		cors.Config{
-			AllowOrigins: []string{"http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173", "http://127.0.0.1:5174",
-				"http://155.230.36.27:5173", "http://155.230.36.27:5174", "http://155.230.36.27:4140", "http://155.230.36.27:4141"},
+			AllowOrigins:     config.CORSAllowedOrigins,
 			AllowMethods: []string{"POST", "GET", "PATCH", "DELETE", "OPTIONS"},
 			AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
 			// allow headers

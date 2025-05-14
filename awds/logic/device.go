@@ -49,28 +49,8 @@ func (logic *Logic) GetDeviceResourceMetrics(device *types.Device) (*types.Devic
 		return nil, err
 	}
 
-	// save info - getting info from /metrics
-	// body := string(resp.Body())
-
-	// networkBandwidth, err := extractMetric(body, "network_bandwidth")
-    // if err != nil {
-    //     log.Fatalf("Error extracting network_bandwidth: %v", err)
-    // }
-
-    // availableRam, err := extractMetric(body, "available_ram")
-    // if err != nil {
-    //     log.Fatalf("Error extracting available_ram: %v", err)
-    // }
-	
-
 	device.NetworkLatency = response.NetworkLatency // in Mbps
-	// device.Memory = response.Memory / (1000 * 1000 * 1000) // in GBs
 	device.Memory = response.Memory // to verify upperlimit
-
-	// // if response["cpu"].(float64) <= 0 { 
-	// // 	return nil, fmt.Errorf("CPU unavailable, value must be postive!")
-	// // }
-	// // device.CPU = response["cpu"].(float64)
 
 	return device, nil
 }

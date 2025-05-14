@@ -11,10 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	SQLiteDBFileName string = "awds.db"
-)
-
 type DBAdapter struct {
 	config *commons.Config
 	db     *gorm.DB
@@ -26,7 +22,7 @@ func RemoveDBFile(config *commons.Config) error {
 		"function": "RemoveDBFile",
 	})
 
-	absPath, err := filepath.Abs(SQLiteDBFileName)
+	absPath, err := filepath.Abs(config.SQLitePath)
 	if err != nil {
 		return err
 	}
@@ -35,7 +31,7 @@ func RemoveDBFile(config *commons.Config) error {
 	if err == nil && !fi.IsDir() {
 		// exist
 		logger.Debugf("Removing db file %s", absPath)
-		return os.RemoveAll(SQLiteDBFileName)
+		return os.RemoveAll(config.SQLitePath)
 	}
 
 	return nil
@@ -43,8 +39,8 @@ func RemoveDBFile(config *commons.Config) error {
 
 // Start starts DBAdapter
 func Start(config *commons.Config) (*DBAdapter, error) {
-  	db, err := gorm.Open(sqlite.Open(SQLiteDBFileName), &gorm.Config{})
-	// db, err := gorm.Open(sqlite.Open(SQLiteDBFileName), &gorm.Config{})
+	dbPath := config.SQLitePath
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

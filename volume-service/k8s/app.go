@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lab-paper-code/ksv/volume-service/types"
+	"volume-service/types"
+
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -26,7 +27,9 @@ const (
 	appIngressNamespace      string = objectNamespace
 
 	appContainerVolumeName  string = "app-storage"
-	appContainerPVMountPath string = "/var/lib/mysql" // must rollback to /uploads
+	appContainerPVMountPath string = "/uploads"
+
+	truePointer				bool = true
 )
 
 func (adapter *K8SAdapter) GetAppDeploymentName(appRunID string) string {
@@ -123,7 +126,7 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 			},
 		},
 		SecurityContext: &apiv1.SecurityContext{
-			Privileged: pointer.Bool(true),
+			Privileged: ptr.To[bool](true),
 		},
 	}
 
@@ -144,7 +147,7 @@ func (adapter *K8SAdapter) getAppContainers(app *types.App, device *types.Device
 			},
 		}
 	}
-
+	
 	return []apiv1.Container{container}
 }
 
@@ -218,6 +221,12 @@ func (adapter *K8SAdapter) createAppDeployment(device *types.Device, volume *typ
 		_, createErr := deploymentclient.Create(ctx, deployment, metav1.CreateOptions{})
 		if createErr != nil {
 			return createErr
+		}
+	} else {
+		// exist -> update
+		_, updateErr := deploymentclient.Update(ctx, deployment, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
 		}
 	}
 
@@ -345,6 +354,12 @@ func (adapter *K8SAdapter) createAppStatefulSet(device *types.Device, volume *ty
 		if createErr != nil {
 			return createErr
 		}
+	} else{
+	// exist -> update
+	_, updateErr := statefulsetclient.Update(ctx, statefulset, metav1.UpdateOptions{})
+	if updateErr != nil {
+		return updateErr
+	}
 	}
 
 	return nil
@@ -406,12 +421,12 @@ func (adapter *K8SAdapter) updateAppStatefulSet(device *types.Device, volume *ty
 	// does not exist -> cannot update
 	if err != nil {
 		return err
-	}
-
-	// exist -> update
-	_, updateErr := statefulsetclient.Update(ctx, statefulset, metav1.UpdateOptions{})
-	if updateErr != nil {
-		return updateErr
+	} else {
+		// exist -> update
+		_, updateErr := statefulsetclient.Update(ctx, statefulset, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
 	}
 
 	return nil
@@ -494,7 +509,13 @@ func (adapter *K8SAdapter) createAppService(app *types.App, appRun *types.AppRun
 		_, createErr := serviceClient.Create(ctx, service, metav1.CreateOptions{})
 		if createErr != nil {
 			return createErr
-		}
+		} 
+	} else {
+			// exist -> update
+		_, updateErr := serviceClient.Update(ctx, service, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}	
 	}
 
 	return nil
@@ -527,44 +548,44 @@ func (adapter *K8SAdapter) updateAppService(device *types.Device, volume *types.
 
 	// prepare selector based on stateful or stateless app
 	selector := map[string]string{
-		"app-name": adapter.GetAppDeploymentName(appRun.ID),
+		"app": adapter.GetAppDeploymentName(appRun.ID),
 	}
 	if app.Stateful {
 		selector = map[string]string{
-			"app-name": adapter.GetAppStatefulSetName(appRun.ID),
+			"app": adapter.GetAppStatefulSetName(appRun.ID),
 		}
 	}
 
-	// service := &apiv1.Service{
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name:      appServiceName,
-	// 		Labels:    appServiceLabels,
-	// 		Namespace: appServiceNamespace,
-	// 	},
-	// 	Spec: apiv1.ServiceSpec{
-	// 		Selector: selector,
-	// 		Type:     apiv1.ServiceTypeClusterIP,
-	// 	},
-	// }
+	service := &apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      appServiceName,
+			Labels:    appServiceLabels,
+			Namespace: appServiceNamespace,
+		},
+		Spec: apiv1.ServiceSpec{
+			Selector: selector,
+			Type:     apiv1.ServiceTypeNodePort,
+		},
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
 	serviceClient := adapter.clientSet.CoreV1().Services(volumeNamespace)
-	existingService, err := serviceClient.Get(ctx, appServiceName, metav1.GetOptions{})
+	service, err := serviceClient.Get(ctx, appServiceName, metav1.GetOptions{})
 	// does not exist -> cannot update
 	if err != nil {
 		return err
-	}
+	} else {
+		service.ObjectMeta.Labels = appServiceLabels
+		service.Spec.Ports = servicePorts
+		service.Spec.Selector = selector
 
-	existingService.ObjectMeta.Labels = appServiceLabels
-	existingService.Spec.Ports = servicePorts
-	existingService.Spec.Selector = selector
-
-	// exist -> update
-	_, updateErr := serviceClient.Update(ctx, existingService, metav1.UpdateOptions{})
-	if updateErr != nil {
-		return updateErr
+		// exist -> update
+		_, updateErr := serviceClient.Update(ctx, service, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
 	}
 
 	return nil
@@ -662,6 +683,12 @@ func (adapter *K8SAdapter) createAppIngress(app *types.App, appRun *types.AppRun
 		if createErr != nil {
 			return createErr
 		}
+	} else {
+		// exist -> update
+		_, updateErr := ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
 	}
 
 	return nil
@@ -736,12 +763,12 @@ func (adapter *K8SAdapter) updateAppIngress(device *types.Device, volume *types.
 	// does not exist -> cannot update
 	if err != nil {
 		return err
-	}
-
-	// exist -> update
-	_, updateErr := ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
-	if updateErr != nil {
-		return updateErr
+	} else {
+		// exist -> update
+		_, updateErr := ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
+		if updateErr != nil {
+			return updateErr
+		}
 	}
 
 	return nil
@@ -830,10 +857,10 @@ func (adapter *K8SAdapter) UpdateAppRun(device *types.Device, volume *types.Volu
 		return err
 	}
 
-	err = adapter.updateAppIngress(device, volume, app, appRun)
-	if err != nil {
-		panic(err)
-	}
+	// err = adapter.updateAppIngress(device, volume, app, appRun)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	return nil
 }
@@ -884,31 +911,3 @@ func (adapter *K8SAdapter) EnsureDeleteApp(appRunID string) {
 	adapter.deleteAppDeployment(appRunID)
 }
 
-/*
-   //TODO:  k8s resource들 생성한 후
-   //1. webdav pod으로 exec 명령어로 sed -i -e 's#Alias /uploads \"/uploads\"#Alias /<volumeID>/uploads \"/uploads\"#g' /etc/apache2/conf.d/dav.conf 명령어 실행
-   //2. app pod으로 http://ip:60000/hello_flask?ip=<ip> 해서 dom ip 알려주기
-
-
-   type Output struct {
-       Mount  string       `json:mountPath`
-       Device types.Device `json: device`
-   }
-
-
-   Mount := "http://155.230.36.27/" + volumeID + "/uploads"
-   // 지금과 다름
-   device = types.Device{
-       IP:       input.IP,
-       ID:       volumeID,
-       Username: input.Username,
-       Password: input.Password,
-       Storage:  input.Storage,
-   }
-
-
-   output := Output{
-       Mount:  Mount,
-       Device: device,
-   }
-*/

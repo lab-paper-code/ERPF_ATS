@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"volume-service/types"
+
 	"github.com/gin-gonic/gin"
-	"github.com/lab-paper-code/ksv/volume-service/types"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 )
